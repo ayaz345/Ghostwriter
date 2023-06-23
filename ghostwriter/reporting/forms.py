@@ -638,14 +638,13 @@ class EvidenceForm(forms.ModelForm):
         )
 
     def clean_document(self):
-        document = self.cleaned_data["document"]
-        # Check if evidence file is missing
-        if not document:
+        if document := self.cleaned_data["document"]:
+            return document
+        else:
             raise ValidationError(
                 _("You must provide an evidence file"),
                 "incomplete",
             )
-        return document
 
     def clean_friendly_name(self):
         friendly_name = self.cleaned_data["friendly_name"]
@@ -653,7 +652,10 @@ class EvidenceForm(forms.ModelForm):
             # Check if provided name has already been used for another file for this report
             report_queryset = self.evidence_queryset.values_list("id", "friendly_name")
             for evidence in report_queryset:
-                if friendly_name == evidence[1] and not self.instance.id == evidence[0]:
+                if (
+                    friendly_name == evidence[1]
+                    and self.instance.id != evidence[0]
+                ):
                     raise ValidationError(
                         _("This friendly name has already been used for a file attached to this finding."),
                         "duplicate",
@@ -691,14 +693,13 @@ class FindingNoteForm(forms.ModelForm):
         )
 
     def clean_note(self):
-        note = self.cleaned_data["note"]
-        # Check if note is empty
-        if not note:
+        if note := self.cleaned_data["note"]:
+            return note
+        else:
             raise ValidationError(
                 _("You must provide some content for the note"),
                 code="required",
             )
-        return note
 
 
 class LocalFindingNoteForm(forms.ModelForm):
@@ -731,14 +732,13 @@ class LocalFindingNoteForm(forms.ModelForm):
         )
 
     def clean_note(self):
-        note = self.cleaned_data["note"]
-        # Check if note is empty
-        if not note:
+        if note := self.cleaned_data["note"]:
+            return note
+        else:
             raise ValidationError(
                 _("You must provide some content for the note"),
                 code="required",
             )
-        return note
 
 
 class ReportTemplateForm(forms.ModelForm):
@@ -833,14 +833,13 @@ class ReportTemplateForm(forms.ModelForm):
         )
 
     def clean_document(self):
-        document = self.cleaned_data["document"]
-        # Check if template file is missing
-        if not document:
+        if document := self.cleaned_data["document"]:
+            return document
+        else:
             raise ValidationError(
                 _("You must provide a template file"),
                 "incomplete",
             )
-        return document
 
 
 class SelectReportTemplateForm(forms.ModelForm):

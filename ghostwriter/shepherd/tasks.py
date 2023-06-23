@@ -65,7 +65,7 @@ class BearerAuth(requests.auth.AuthBase):
         self.token = token
 
     def __call__(self, r):
-        r.headers["Authorization"] = "Bearer " + self.token
+        r.headers["Authorization"] = f"Bearer {self.token}"
         return r
 
 
@@ -127,27 +127,29 @@ def namecheap_reset_dns(namecheap_config, domain):
                 error = root.Errors.Error.text
                 logger.error("DNS Error %s: %s", error_num, error)
                 results["result"] = "no action"
-                results["error"] = "DNS Error {}: {}".format(error_num, error)
+                results["error"] = f"DNS Error {error_num}: {error}"
             else:
                 logger.error(
                     'Namecheap did not return an "OK" response – %s',
                     req.text,
                 )
                 results["result"] = "no action"
-                results["error"] = 'Namecheap did not return an "OK" response.\nFull Response:\n{}'.format(req.text)
+                results[
+                    "error"
+                ] = f'Namecheap did not return an "OK" response.\nFull Response:\n{req.text}'
         else:
             logger.error(
                 'Namecheap API request returned status "%s"',
                 req.status_code,
             )
             results["result"] = "no action"
-            results["error"] = 'Namecheap did not return a 200 response.\nL.. API request returned status "{}"'.format(
-                req.status_code
-            )
+            results[
+                "error"
+            ] = f'Namecheap did not return a 200 response.\nL.. API request returned status "{req.status_code}"'
     except Exception as error:
         logger.error("Namecheap API request failed with error: %s", error)
         results["result"] = "no action"
-        results["error"] = "Namecheap API request failed with error: {}".format(error)
+        results["error"] = f"Namecheap API request failed with error: {error}"
 
     return results
 
@@ -193,28 +195,25 @@ def release_domains(no_action=False):
             # Check if tomorrow is the end date
             if date.today() == warning_date:
                 release_me = False
-                message = "Your domain, {}, will be released tomorrow! Modify the project's end date as needed.".format(
-                    domain.name
-                )
+                message = f"Your domain, {domain.name}, will be released tomorrow! Modify the project's end date as needed."
                 if slack.enabled:
-                    err = slack.send_msg(message, slack_channel)
-                    if err:
+                    if err := slack.send_msg(message, slack_channel):
                         logger.warning(
                             "Attempt to send a Slack notification returned an error: %s",
                             err,
                         )
         except History.DoesNotExist:
             logger.warning("The domain %s has no project history, so releasing it", domain.name)
-            release_date = datetime.today()
+            release_date = datetime.now()
 
         # If ``release_me`` is still ``True``, release the domain
         if release_me:
             logger.warning("The domain %s is marked for release", domain.name)
             domains_to_be_released.append(domain)
-            domain_updates[domain.id] = {}
-            domain_updates[domain.id]["domain"] = domain.name
-            domain_updates[domain.id]["release_date"] = release_date
-
+            domain_updates[domain.id] = {
+                "domain": domain.name,
+                "release_date": release_date,
+            }
             # Check no_action and just return list if it is set to True
             if no_action:
                 logger.info(
@@ -224,10 +223,9 @@ def release_domains(no_action=False):
                 domain_updates[domain.id]["change"] = "no action"
             else:
                 logger.info("Releasing %s back into the pool.", domain.name)
-                message = "Your domain, {}, has been released.".format(domain.name)
+                message = f"Your domain, {domain.name}, has been released."
                 if slack.enabled:
-                    err = slack.send_msg(message, slack_channel)
-                    if err:
+                    if err := slack.send_msg(message, slack_channel):
                         logger.warning(
                             "Attempt to send a Slack notification returned an error: %s",
                             err,
@@ -289,12 +287,9 @@ def release_servers(no_action=False):
             # Check if tomorrow is the end date
             if date.today() == warning_date:
                 release_me = False
-                message = "Your server, {}, will be released tomorrow! Modify the project's end date as needed.".format(
-                    server.ip_address
-                )
+                message = f"Your server, {server.ip_address}, will be released tomorrow! Modify the project's end date as needed."
                 if slack.enabled:
-                    err = slack.send_msg(message, slack_channel)
-                    if err:
+                    if err := slack.send_msg(message, slack_channel):
                         logger.warning(
                             "Attempt to send a Slack notification returned an error: %s",
                             err,
@@ -304,26 +299,25 @@ def release_servers(no_action=False):
                 "The server %s has no project history, so releasing it",
                 server.ip_address,
             )
-            release_date = datetime.today()
+            release_date = datetime.now()
 
         # If ``release_me`` is still ``True``, release the server
         if release_me:
             logger.warning("The server %s is marked for release", server.ip_address)
             servers_to_be_released.append(server)
-            server_updates[server.id] = {}
-            server_updates[server.id]["server"] = server.ip_address
-            server_updates[server.id]["hostname"] = server.name
-            server_updates[server.id]["release_date"] = release_date
-
+            server_updates[server.id] = {
+                "server": server.ip_address,
+                "hostname": server.name,
+                "release_date": release_date,
+            }
             # Check ``no_action`` and just return list if it is set to ``True``
             if no_action:
                 server_updates[server.id]["change"] = "no action"
             else:
                 logger.info("Releasing %s back into the pool.", server.ip_address)
-                message = "Your server, {}, has been released.".format(server.ip_address)
+                message = f"Your server, {server.ip_address}, has been released."
                 if slack.enabled:
-                    err = slack.send_msg(message, slack_channel)
-                    if err:
+                    if err := slack.send_msg(message, slack_channel):
                         logger.warning(
                             "Attempt to send a Slack notification returned an error: %s",
                             err,

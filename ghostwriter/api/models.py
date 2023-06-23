@@ -58,13 +58,7 @@ class BaseAPIKeyManager(models.Manager):
         except self.model.DoesNotExist:
             return False
 
-        if entry.has_expired:
-            return False
-
-        if not entry.user.is_active:
-            return False
-
-        return True
+        return False if entry.has_expired else bool(entry.user.is_active)
 
 
 class APIKeyManager(BaseAPIKeyManager):
@@ -112,19 +106,14 @@ class AbstractAPIKey(models.Model):
         self._initial_revoked = self.revoked
 
     def _has_expired(self) -> bool:
-        if self.expiry_date is None:
-            return False
-        return self.expiry_date < timezone.now()
+        return False if self.expiry_date is None else self.expiry_date < timezone.now()
 
     _has_expired.short_description = "Has expired"
     _has_expired.boolean = True
     has_expired = property(_has_expired)
 
     def is_valid(self, key: str) -> bool:
-        payload = jwt_decode_no_verification(key)
-        if payload:
-            return True
-        return False
+        return bool(payload := jwt_decode_no_verification(key))
 
     def clean(self) -> None:
         self._validate_revoked()

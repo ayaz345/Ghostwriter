@@ -67,8 +67,7 @@ class DNSCollector:
         """
         record_list = []
         for rdata in dns_record.response.answer:
-            for item in rdata.items:
-                record_list.append(item.to_text())
+            record_list.extend(item.to_text() for item in rdata.items)
         return record_list
 
     async def _fetch_record(self, domain: str, record_type: str) -> dict:
@@ -91,9 +90,9 @@ class DNSCollector:
         if record_type.lower() == "dmarc":
             record_type = "A"
             query_type = "dmarc_record"
-            query_domain = "_dmarc." + domain
+            query_domain = f"_dmarc.{domain}"
         else:
-            query_type = record_type.lower() + "_record"
+            query_type = f"{record_type.lower()}_record"
             query_domain = domain
 
         # Execute query and await completion
@@ -122,11 +121,11 @@ class DNSCollector:
         tasks = []
         # For each domain, create a task for each DNS record of interest
         for domain in domains:
-            for record_type in record_types:
-                tasks.append(self._fetch_record(domain=domain.name, record_type=record_type))
-        # Gather all tasks for execution
-        all_tasks = await asyncio.gather(*tasks)
-        return all_tasks
+            tasks.extend(
+                self._fetch_record(domain=domain.name, record_type=record_type)
+                for record_type in record_types
+            )
+        return await asyncio.gather(*tasks)
 
     def run_async_dns(self, domains: list, record_types: list) -> dict:
         """
@@ -148,9 +147,7 @@ class DNSCollector:
         # Combine all dicts with the same domain name
         for res in results:
             for key, value in res.items():
-                if key in combined:
-                    combined[key].update(value)
-                else:
+                if key not in combined:
                     combined[key] = {}
-                    combined[key].update(value)
+                combined[key].update(value)
         return combined

@@ -89,7 +89,7 @@ class TemplateTagTests(TestCase):
     def setUpTestData(cls):
         cls.ReportFindingLink = ReportFindingLinkFactory._meta.model
         cls.report = ReportFactory()
-        for x in range(3):
+        for _ in range(3):
             ReportFindingLinkFactory(report=cls.report)
 
     def setUp(self):
@@ -199,9 +199,10 @@ class AssignFindingTests(TestCase):
 
     def test_view_response_with_session_vars(self):
         self.session = self.client_auth.session
-        self.session["active_report"] = {}
-        self.session["active_report"]["id"] = self.report.id
-        self.session["active_report"]["title"] = self.report.title
+        self.session["active_report"] = {
+            "id": self.report.id,
+            "title": self.report.title,
+        }
         self.session.save()
 
         self.assertEqual(
@@ -210,16 +211,14 @@ class AssignFindingTests(TestCase):
         )
 
         response = self.client_auth.post(self.uri)
-        message = "{} successfully added to your active report".format(self.finding)
+        message = f"{self.finding} successfully added to your active report"
         data = {"result": "success", "message": message}
 
         self.assertJSONEqual(force_str(response.content), data)
 
     def test_view_response_with_bad_session_vars(self):
         self.session = self.client_auth.session
-        self.session["active_report"] = {}
-        self.session["active_report"]["id"] = 999
-        self.session["active_report"]["title"] = self.report.title
+        self.session["active_report"] = {"id": 999, "title": self.report.title}
         self.session.save()
 
         self.assertEqual(
@@ -392,12 +391,12 @@ class FindingsListViewTests(TestCase):
         self.assertTrue(len(response.context["filter"].qs) == len(self.findings))
 
     def test_search_findings(self):
-        response = self.client_auth.get(self.uri + "?finding_search=Finding+2")
+        response = self.client_auth.get(f"{self.uri}?finding_search=Finding+2")
         self.assertEqual(response.status_code, 200)
         self.assertTrue(len(response.context["filter"].qs) == 1)
 
     def test_filter_findings(self):
-        response = self.client_auth.get(self.uri + "?title=Finding+2&submit=Filter")
+        response = self.client_auth.get(f"{self.uri}?title=Finding+2&submit=Filter")
         self.assertEqual(response.status_code, 200)
         self.assertTrue(len(response.context["filter"].qs) == 1)
 
@@ -720,9 +719,7 @@ class ReportCreateViewTests(TestCase):
     def test_get_success_url_with_session_vars(self):
         # Set up session variables to be clear
         self.session = self.client_auth.session
-        self.session["active_report"] = {}
-        self.session["active_report"]["id"] = ""
-        self.session["active_report"]["title"] = ""
+        self.session["active_report"] = {"id": "", "title": ""}
         self.session.save()
 
         # Send POST to delete and check if session vars are set
@@ -793,9 +790,7 @@ class ReportUpdateViewTests(TestCase):
     def test_get_success_url_with_session_vars(self):
         # Set up session variables to be clear
         self.session = self.client_auth.session
-        self.session["active_report"] = {}
-        self.session["active_report"]["id"] = ""
-        self.session["active_report"]["title"] = ""
+        self.session["active_report"] = {"id": "", "title": ""}
         self.session.save()
 
         # Send POST to delete and check if session vars are set
@@ -866,9 +861,10 @@ class ReportDeleteViewTests(TestCase):
     def test_get_success_url(self):
         # Set session variables to "activate" target report object
         self.session = self.client_auth.session
-        self.session["active_report"] = {}
-        self.session["active_report"]["id"] = self.delete_report.id
-        self.session["active_report"]["title"] = self.delete_report.title
+        self.session["active_report"] = {
+            "id": self.delete_report.id,
+            "title": self.delete_report.title,
+        }
         self.session.save()
 
         # Send POST to delete and check if session is now cleared
@@ -1269,9 +1265,9 @@ class ReportTemplateListViewTests(TestCase):
 
         cls.num_of_templates = 10
         cls.templates = []
-        for template_id in range(cls.num_of_templates):
-            cls.templates.append(ReportTemplateFactory())
-
+        cls.templates.extend(
+            ReportTemplateFactory() for _ in range(cls.num_of_templates)
+        )
         cls.uri = reverse("reporting:templates")
 
     def setUp(self):

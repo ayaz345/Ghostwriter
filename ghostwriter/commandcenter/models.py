@@ -25,15 +25,16 @@ def sanitize(sensitive_thing):
             length = len(webhook_tail)
             # Construct a sanitized string
             sanitized_string = (
-                "/".join(sensitive_thing[:-1])
-                + "/"
-                + webhook_tail[0:4]
+                ("/".join(sensitive_thing[:-1]) + "/" + webhook_tail[:4])
                 + "\u2717" * (length - 8)
                 + webhook_tail[length - 5 : length - 1]
             )
-        # Handle anything else that's long enough to be a key
         elif length > 15:
-            sanitized_string = sensitive_thing[0:4] + "\u2717" * (length - 8) + sensitive_thing[length - 5 : length - 1]
+            sanitized_string = (
+                sensitive_thing[:4]
+                + "\u2717" * (length - 8)
+                + sensitive_thing[length - 5 : length - 1]
+            )
     return sanitized_string
 
 

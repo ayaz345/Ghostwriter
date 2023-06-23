@@ -56,9 +56,7 @@ from ghostwriter.users.models import User
 
 def strip_html(value):
     """Strip HTML from a string."""
-    if value is None:
-        return None
-    return BeautifulSoup(value, "html.parser").text
+    return None if value is None else BeautifulSoup(value, "html.parser").text
 
 
 class CustomModelSerializer(serializers.ModelSerializer):
@@ -93,8 +91,7 @@ class StaticServerField(RelatedField):
     """Customize the string representation of a :model:`shepherd.ServerHistory` entry."""
 
     def to_representation(self, value):
-        string_value = value.ip_address
-        return string_value
+        return value.ip_address
 
 
 class CloudServerField(RelatedField):
@@ -203,9 +200,7 @@ class FindingLinkSerializer(TaggitSerializer, CustomModelSerializer):
         fields = "__all__"
 
     def get_assigned_to(self, obj):
-        if obj.assigned_to:
-            return obj.assigned_to.name
-        return "TBD"
+        return obj.assigned_to.name if obj.assigned_to else "TBD"
 
     def get_severity_color(self, obj):
         return obj.severity.color
@@ -285,9 +280,7 @@ class ClientSerializer(TaggitSerializer, CustomModelSerializer):
         fields = "__all__"
 
     def get_short_name(self, obj):
-        if obj.short_name:
-            return obj.short_name
-        return obj.name
+        return obj.short_name if obj.short_name else obj.name
 
     def get_address(self, obj):
         return strip_html(obj.address)
@@ -413,8 +406,7 @@ class ProjectScopeSerializer(CustomModelSerializer):
         fields = "__all__"
 
     def get_total(self, obj):
-        total = obj.count_lines()
-        return total
+        return obj.count_lines()
 
     def get_scope_list(self, obj):
         return obj.scope.split("\r\n")
@@ -777,22 +769,16 @@ class ReportDataSerializer(CustomModelSerializer):
         total_team = len(rep["team"])
         total_targets = len(rep["targets"])
 
-        completed_objectives = 0
-        for objective in rep["objectives"]:
-            if objective["complete"]:
-                completed_objectives += 1
-
-        total_scope_lines = 0
-        for scope in rep["scope"]:
-            total_scope_lines += scope["total"]
-
-        finding_order = 0
+        completed_objectives = sum(
+            1 for objective in rep["objectives"] if objective["complete"]
+        )
+        total_scope_lines = sum(scope["total"] for scope in rep["scope"])
         critical_findings = 0
         high_findings = 0
         medium_findings = 0
         low_findings = 0
         info_findings = 0
-        for finding in rep["findings"]:
+        for finding_order, finding in enumerate(rep["findings"]):
             finding["ordering"] = finding_order
             if finding["severity"].lower() == "critical":
                 critical_findings += 1
@@ -804,20 +790,18 @@ class ReportDataSerializer(CustomModelSerializer):
                 low_findings += 1
             elif finding["severity"].lower() == "informational":
                 info_findings += 1
-            finding_order += 1
-
         # Add a ``totals`` key to track the values
-        rep["totals"] = {}
-        rep["totals"]["objectives"] = total_objectives
-        rep["totals"]["objectives_completed"] = completed_objectives
-        rep["totals"]["findings"] = total_findings
-        rep["totals"]["findings_critical"] = critical_findings
-        rep["totals"]["findings_high"] = high_findings
-        rep["totals"]["findings_medium"] = medium_findings
-        rep["totals"]["findings_low"] = low_findings
-        rep["totals"]["findings_info"] = info_findings
-        rep["totals"]["scope"] = total_scope_lines
-        rep["totals"]["team"] = total_team
-        rep["totals"]["targets"] = total_targets
-
+        rep["totals"] = {
+            "objectives": total_objectives,
+            "objectives_completed": completed_objectives,
+            "findings": total_findings,
+            "findings_critical": critical_findings,
+            "findings_high": high_findings,
+            "findings_medium": medium_findings,
+            "findings_low": low_findings,
+            "findings_info": info_findings,
+            "scope": total_scope_lines,
+            "team": total_team,
+            "targets": total_targets,
+        }
         return rep

@@ -86,8 +86,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_position(report_pk, severity):
-    findings = ReportFindingLink.objects.filter(Q(report__pk=report_pk) & Q(severity=severity)).order_by("-position")
-    if findings:
+    if findings := ReportFindingLink.objects.filter(
+        Q(report__pk=report_pk) & Q(severity=severity)
+    ).order_by("-position"):
         # Set new position to be one above the last/largest position
         last_position = findings[0].position
         return last_position + 1
@@ -145,7 +146,7 @@ def ajax_update_report_findings(request):
                             finding_id,
                         )
         else:
-            data = {"result": "specified severity weight, {}, is invalid".format(weight)}
+            data = {"result": f"specified severity weight, {weight}, is invalid"}
     else:
         data = {"result": "error"}
     return JsonResponse(data)
@@ -184,9 +185,7 @@ class AssignFinding(LoginRequiredMixin, SingleObjectMixin, View):
     def post(self, *args, **kwargs):
         finding_instance = self.get_object()
 
-        # The user must have the ``active_report`` session variable
-        active_report = self.request.session.get("active_report", None)
-        if active_report:
+        if active_report := self.request.session.get("active_report", None):
             try:
                 report = Report.objects.get(pk=active_report["id"])
             except Exception:
@@ -216,7 +215,7 @@ class AssignFinding(LoginRequiredMixin, SingleObjectMixin, View):
             report_link.save()
             report_link.tags.add(*finding_instance.tags.all())
 
-            message = "{} successfully added to your active report".format(finding_instance)
+            message = f"{finding_instance} successfully added to your active report"
             data = {"result": "success", "message": message}
             logger.info(
                 "Copied %s %s to %s %s (%s %s) by request of %s",
@@ -325,9 +324,10 @@ class ReportActivate(LoginRequiredMixin, SingleObjectMixin, View):
     def post(self, *args, **kwargs):
         report = self.get_object()
         try:
-            self.request.session["active_report"] = {}
-            self.request.session["active_report"]["id"] = report.id
-            self.request.session["active_report"]["title"] = report.title
+            self.request.session["active_report"] = {
+                "id": report.id,
+                "title": report.title,
+            }
             message = "{report} is now your active report and you will be redirected there in 5 seconds".format(
                 report=report.title
             )
@@ -462,7 +462,7 @@ class ReportFindingStatusUpdate(LoginRequiredMixin, SingleObjectMixin, View):
                 classes = "healthy"
             else:
                 result = "error"
-                message = "Could not update the finding's status to: {}".format(status)
+                message = f"Could not update the finding's status to: {status}"
                 display_status = "Error"
                 classes = "burned"
             finding.save()
@@ -480,7 +480,6 @@ class ReportFindingStatusUpdate(LoginRequiredMixin, SingleObjectMixin, View):
                 status,
                 self.request.user,
             )
-        # Return an error message if the query for the requested status returned DoesNotExist
         except Exception as exception:  # pragma: no cover
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             log_message = template.format(type(exception).__name__, exception.args)
@@ -681,7 +680,7 @@ class ReportClone(LoginRequiredMixin, SingleObjectMixin, View):
         report_pk = None
         try:
             findings = ReportFindingLink.objects.select_related("report").filter(report=report_to_clone.pk)
-            report_to_clone.title = report_to_clone.title + " Copy"
+            report_to_clone.title = f"{report_to_clone.title} Copy"
             report_to_clone.complete = False
             report_to_clone.pk = None
             report_to_clone.save()
@@ -722,7 +721,7 @@ class ReportClone(LoginRequiredMixin, SingleObjectMixin, View):
 
             messages.success(
                 self.request,
-                "Successfully cloned your report: {}".format(report_to_clone.title),
+                f"Successfully cloned your report: {report_to_clone.title}",
                 extra_tags="alert-error",
             )
         except Exception as exception:  # pragma: no cover
@@ -732,7 +731,7 @@ class ReportClone(LoginRequiredMixin, SingleObjectMixin, View):
 
             messages.error(
                 self.request,
-                "Encountered an error while trying to clone your report: {}".format(exception.args),
+                f"Encountered an error while trying to clone your report: {exception.args}",
                 extra_tags="alert-error",
             )
 
@@ -785,7 +784,7 @@ class AssignBlankFinding(LoginRequiredMixin, SingleObjectMixin, View):
 
             messages.error(
                 self.request,
-                "Encountered an error while trying to add a blank finding to your report: {}".format(exception.args),
+                f"Encountered an error while trying to add a blank finding to your report: {exception.args}",
                 extra_tags="alert-error",
             )
 
@@ -831,7 +830,7 @@ class ConvertFinding(LoginRequiredMixin, SingleObjectMixin, View):
 
             messages.error(
                 self.request,
-                "Encountered an error while trying to convert your finding: {}".format(exception.args),
+                f"Encountered an error while trying to convert your finding: {exception.args}",
                 extra_tags="alert-error",
             )
             return HttpResponse(status=500)
@@ -882,7 +881,7 @@ def findings_list(request):
     if search_term:
         messages.success(
             request,
-            "Displaying search results for: {}".format(search_term),
+            f"Displaying search results for: {search_term}",
             extra_tags="alert-success",
         )
         findings = (
@@ -996,7 +995,7 @@ def zip_directory(path, zip_handler):
         for file in files:
             absname = os.path.abspath(os.path.join(root, file))
             arcname = absname[len(abs_src) + 1 :]
-            zip_handler.write(os.path.join(root, file), "evidence/" + arcname)
+            zip_handler.write(os.path.join(root, file), f"evidence/{arcname}")
 
 
 @login_required
@@ -1036,8 +1035,8 @@ def archive(request, pk):
             zf.writestr("report.pptx", ppt_doc.getvalue())
             zip_directory(evidence_loc, zf)
         zip_buffer.seek(0)
-        with open(os.path.join(archive_loc, report_name + ".zip"), "wb+") as archive_file:
-            archive_file = ContentFile(zip_buffer.read(), name=report_name + ".zip")
+        with open(os.path.join(archive_loc, f"{report_name}.zip"), "wb+") as archive_file:
+            archive_file = ContentFile(zip_buffer.read(), name=f"{report_name}.zip")
             new_archive = Archive(
                 project=report_instance.project,
                 report_archive=File(archive_file),
@@ -1045,7 +1044,7 @@ def archive(request, pk):
         new_archive.save()
         messages.success(
             request,
-            "Successfully archived {}".format(report_instance.title),
+            f"Successfully archived {report_instance.title}",
             extra_tags="alert-success",
         )
         return HttpResponseRedirect(reverse("reporting:archived_reports"))
@@ -1081,7 +1080,9 @@ def download_archive(request, pk):
     if os.path.exists(file_path):
         with open(file_path, "rb") as archive_file:
             response = HttpResponse(archive_file.read(), content_type="application/x-zip-compressed")
-            response["Content-Disposition"] = "attachment; filename=" + os.path.basename(file_path)
+            response[
+                "Content-Disposition"
+            ] = f"attachment; filename={os.path.basename(file_path)}"
             return response
     raise Http404
 
@@ -1144,7 +1145,7 @@ class FindingCreate(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         messages.success(
             self.request,
-            "Successfully added {} to the findings library".format(self.object.title),
+            f"Successfully added {self.object.title} to the findings library",
             extra_tags="alert-success",
         )
         return reverse("reporting:finding_detail", kwargs={"pk": self.object.pk})
@@ -1175,7 +1176,7 @@ class FindingUpdate(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         messages.success(
             self.request,
-            "Master record for {} was successfully updated".format(self.get_object().title),
+            f"Master record for {self.get_object().title} was successfully updated",
             extra_tags="alert-success",
         )
         return reverse("reporting:finding_detail", kwargs={"pk": self.object.pk})
@@ -1205,7 +1206,7 @@ class FindingDelete(LoginRequiredMixin, DeleteView):
     def get_success_url(self):
         messages.warning(
             self.request,
-            "Master record for {} was successfully deleted".format(self.get_object().title),
+            f"Master record for {self.get_object().title} was successfully deleted",
             extra_tags="alert-warning",
         )
         return reverse_lazy("reporting:findings")
@@ -1279,9 +1280,7 @@ class ReportCreate(LoginRequiredMixin, CreateView):
         self.project = ""
         # Determine if ``pk`` is in the kwargs
         if "pk" in self.kwargs:
-            pk = self.kwargs.get("pk")
-            # Try to get the project from :model:`rolodex.Project`
-            if pk:
+            if pk := self.kwargs.get("pk"):
                 try:
                     self.project = get_object_or_404(Project, pk=self.kwargs.get("pk"))
                 except Project.DoesNotExist:
@@ -1316,13 +1315,12 @@ class ReportCreate(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
-        self.request.session["active_report"] = {}
-        self.request.session["active_report"]["title"] = form.instance.title
+        self.request.session["active_report"] = {"title": form.instance.title}
         return super().form_valid(form)
 
     def get_initial(self):
         if self.project:
-            title = "{} {} ({}) Report".format(self.project.client, self.project.project_type, self.project.start_date)
+            title = f"{self.project.client} {self.project.project_type} ({self.project.start_date}) Report"
             return {"title": title, "project": self.project.id}
         return super().get_initial()
 
@@ -1371,9 +1369,10 @@ class ReportUpdate(LoginRequiredMixin, UpdateView):
         return ctx
 
     def form_valid(self, form):
-        self.request.session["active_report"] = {}
-        self.request.session["active_report"]["id"] = form.instance.id
-        self.request.session["active_report"]["title"] = form.instance.title
+        self.request.session["active_report"] = {
+            "id": form.instance.id,
+            "title": form.instance.title,
+        }
         self.request.session.modified = True
         return super().form_valid(form)
 
@@ -1406,9 +1405,7 @@ class ReportDelete(LoginRequiredMixin, DeleteView):
     def get_success_url(self):
         # Clear user's session if deleted report is their active report
         if self.object.pk == self.request.session["active_report"]["id"]:
-            self.request.session["active_report"] = {}
-            self.request.session["active_report"]["id"] = ""
-            self.request.session["active_report"]["title"] = ""
+            self.request.session["active_report"] = {"id": "", "title": ""}
         self.request.session.modified = True
         messages.warning(
             self.request,
@@ -1713,7 +1710,7 @@ class GenerateReportDOCX(LoginRequiredMixin, SingleObjectMixin, View):
             # Send WebSocket message to update user's webpage
             try:
                 async_to_sync(channel_layer.group_send)(
-                    "report_{}".format(self.object.pk),
+                    f"report_{self.object.pk}",
                     {
                         "type": "status_update",
                         "message": {"status": "success"},
@@ -1774,7 +1771,7 @@ class GenerateReportDOCX(LoginRequiredMixin, SingleObjectMixin, View):
             )
             messages.error(
                 self.request,
-                "Halted document generation because an evidence file is missing: {}".format(error),
+                f"Halted document generation because an evidence file is missing: {error}",
                 extra_tags="alert-danger",
             )
         except UnrecognizedImageError as error:
@@ -1786,7 +1783,9 @@ class GenerateReportDOCX(LoginRequiredMixin, SingleObjectMixin, View):
             )
             messages.error(
                 self.request,
-                "Encountered an error generating the document: {}".format(error).replace('"', "").replace("'", "`"),
+                f"Encountered an error generating the document: {error}".replace(
+                    '"', ""
+                ).replace("'", "`"),
                 extra_tags="alert-danger",
             )
         except Exception as error:
@@ -1798,7 +1797,9 @@ class GenerateReportDOCX(LoginRequiredMixin, SingleObjectMixin, View):
             )
             messages.error(
                 self.request,
-                "Encountered an error generating the document: {}".format(error).replace('"', "").replace("'", "`"),
+                f"Encountered an error generating the document: {error}".replace(
+                    '"', ""
+                ).replace("'", "`"),
                 extra_tags="alert-danger",
             )
 
@@ -1846,7 +1847,7 @@ class GenerateReportXLSX(LoginRequiredMixin, SingleObjectMixin, View):
             )
             messages.error(
                 self.request,
-                "Encountered an error generating the spreadsheet: {}".format(error),
+                f"Encountered an error generating the spreadsheet: {error}",
                 extra_tags="alert-danger",
             )
         return HttpResponseRedirect(reverse("reporting:report_detail", kwargs={"pk": self.object.pk}))
@@ -1948,7 +1949,7 @@ class GenerateReportPPTX(LoginRequiredMixin, SingleObjectMixin, View):
             )
             messages.error(
                 self.request,
-                "Halted document generation because an evidence file is missing: {}".format(error),
+                f"Halted document generation because an evidence file is missing: {error}",
                 extra_tags="alert-danger",
             )
         except UnrecognizedImageError as error:
@@ -1960,7 +1961,9 @@ class GenerateReportPPTX(LoginRequiredMixin, SingleObjectMixin, View):
             )
             messages.error(
                 self.request,
-                "Encountered an error generating the document: {}".format(error).replace('"', "").replace("'", "`"),
+                f"Encountered an error generating the document: {error}".replace(
+                    '"', ""
+                ).replace("'", "`"),
                 extra_tags="alert-danger",
             )
         except Exception as error:
@@ -1972,7 +1975,9 @@ class GenerateReportPPTX(LoginRequiredMixin, SingleObjectMixin, View):
             )
             messages.error(
                 self.request,
-                "Encountered an error generating the document: {}".format(error).replace('"', "").replace("'", "`"),
+                f"Encountered an error generating the document: {error}".replace(
+                    '"', ""
+                ).replace("'", "`"),
                 extra_tags="alert-danger",
             )
 
@@ -2064,7 +2069,7 @@ class GenerateReportAll(LoginRequiredMixin, SingleObjectMixin, View):
         except Exception as error:
             messages.error(
                 self.request,
-                "Encountered an error generating the document: {}".format(error),
+                f"Encountered an error generating the document: {error}",
                 extra_tags="alert-danger",
             )
 
@@ -2102,7 +2107,7 @@ class ReportFindingLinkUpdate(LoginRequiredMixin, UpdateView):
         if form.changed_data:
             changed_at = dateformat.format(timezone.now(), "H:i:s e")
             async_to_sync(channel_layer.group_send)(
-                "finding_{}".format(self.object.id),
+                f"finding_{self.object.id}",
                 {
                     "type": "message",
                     "message": {
@@ -2119,46 +2124,42 @@ class ReportFindingLinkUpdate(LoginRequiredMixin, UpdateView):
             old_entry = ReportFindingLink.objects.get(pk=self.object.pk)
             old_assignee = old_entry.assigned_to
             # Notify new assignee over WebSockets
-            if "assigned_to" in form.changed_data:
+        if "assigned_to" in form.changed_data:
                 # Only notify if the assignee is not the user who made the change
-                if self.request.user != self.object.assigned_to:
-                    try:
+            if self.request.user != self.object.assigned_to:
+                try:
                         # Send a message to the assigned user
-                        async_to_sync(channel_layer.group_send)(
-                            "notify_{}".format(self.object.assigned_to),
-                            {
-                                "type": "message",
-                                "message": {
-                                    "message": "You have been assigned to this finding for {}:\n{}".format(
-                                        self.object.report, self.object.title
-                                    ),
-                                    "level": "info",
-                                    "title": "New Assignment",
-                                },
+                    async_to_sync(channel_layer.group_send)(
+                        f"notify_{self.object.assigned_to}",
+                        {
+                            "type": "message",
+                            "message": {
+                                "message": f"You have been assigned to this finding for {self.object.report}:\n{self.object.title}",
+                                "level": "info",
+                                "title": "New Assignment",
                             },
-                        )
-                    except gaierror:
-                        # WebSocket are unavailable (unit testing)
-                        pass
-                if self.request.user != old_assignee:
-                    try:
+                        },
+                    )
+                except gaierror:
+                    # WebSocket are unavailable (unit testing)
+                    pass
+            if self.request.user != old_assignee:
+                try:
                         # Send a message to the unassigned user
-                        async_to_sync(channel_layer.group_send)(
-                            "notify_{}".format(old_assignee),
-                            {
-                                "type": "message",
-                                "message": {
-                                    "message": "You have been unassigned from this finding for {}:\n{}".format(
-                                        self.object.report, self.object.title
-                                    ),
-                                    "level": "info",
-                                    "title": "Assignment Change",
-                                },
+                    async_to_sync(channel_layer.group_send)(
+                        f"notify_{old_assignee}",
+                        {
+                            "type": "message",
+                            "message": {
+                                "message": f"You have been unassigned from this finding for {self.object.report}:\n{self.object.title}",
+                                "level": "info",
+                                "title": "Assignment Change",
                             },
-                        )
-                    except gaierror:
-                        # WebSocket are unavailable (unit testing)
-                        pass
+                        },
+                    )
+                except gaierror:
+                    # WebSocket are unavailable (unit testing)
+                    pass
         return super().form_valid(form)
 
     def get_form(self, form_class=None):
@@ -2172,7 +2173,7 @@ class ReportFindingLinkUpdate(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         messages.success(
             self.request,
-            "Successfully updated {}".format(self.get_object().title),
+            f"Successfully updated {self.get_object().title}",
             extra_tags="alert-success",
         )
         return reverse("reporting:report_detail", kwargs={"pk": self.object.report.id})
@@ -2264,10 +2265,7 @@ class EvidenceCreate(LoginRequiredMixin, CreateView):
         ctx["cancel_link"] = reverse("reporting:report_detail", kwargs={"pk": self.finding_instance.report.pk})
         if "modal" in self.kwargs:
             friendly_names = self.evidence_queryset.values_list("friendly_name", flat=True)
-            used_friendly_names = []
-            # Convert the queryset into a list to pass to JavaScript later
-            for name in friendly_names:
-                used_friendly_names.append(name)
+            used_friendly_names = list(friendly_names)
             ctx["used_friendly_names"] = used_friendly_names
 
         return ctx
@@ -2332,7 +2330,7 @@ class EvidenceUpdate(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         messages.success(
             self.request,
-            "Successfully updated {}".format(self.get_object().friendly_name),
+            f"Successfully updated {self.get_object().friendly_name}",
             extra_tags="alert-success",
         )
         return reverse("reporting:evidence_detail", kwargs={"pk": self.object.pk})

@@ -152,13 +152,12 @@ class DomainReview:
             # Ignore any expired domains because we don't control them anymore
             if domain.is_expired() is False:
                 domain_categories = {}
-                bad_categories = []
                 burned_explanations = []
-                lab_results[domain.id] = {}
-                warnings = []
-                lab_results[domain.id]["domain"] = domain.name
-                lab_results[domain.id]["domain_qs"] = domain
-                lab_results[domain.id]["warnings"] = {}
+                lab_results[domain.id] = {
+                    "domain": domain.name,
+                    "domain_qs": domain,
+                    "warnings": {},
+                }
                 logger.info("Starting domain category update for %s", domain.name)
 
                 # Sort the domain information from queryset
@@ -198,6 +197,7 @@ class DomainReview:
                     if "categories" in vt_results["data"]:
                         # Store the categories and check each one against the blocklist
                         domain_categories = vt_results["data"]["categories"]
+                        bad_categories = []
                         for source, category in domain_categories.items():
                             if category.lower() in self.blocklist:
                                 bad_categories.append(category)
@@ -229,9 +229,7 @@ class DomainReview:
                         if votes["malicious"] > 0:
                             burned = True
                             burned_explanations.append(
-                                "There are {} VirusTotal community votes flagging the the domain as malicious.".format(
-                                    votes["malicious"]
-                                )
+                                f'There are {votes["malicious"]} VirusTotal community votes flagging the the domain as malicious.'
                             )
                             logger.warning(
                                 "There are %s VirusTotal community votes flagging the the domain as malicious",
@@ -245,6 +243,7 @@ class DomainReview:
                 # Assemble the dictionary to return for this domain
                 lab_results[domain.id]["burned"] = burned
                 lab_results[domain.id]["categories"] = domain_categories
+                warnings = []
                 lab_results[domain.id]["warnings"]["messages"] = warnings
                 lab_results[domain.id]["warnings"]["total"] = len(warnings)
                 if burned:

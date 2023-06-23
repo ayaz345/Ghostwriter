@@ -22,15 +22,13 @@ class UserConsumer(AsyncWebsocketConsumer):
         self.user = self.scope["user"]
         if self.user.is_active:
             self.username = self.scope["url_route"]["kwargs"]["username"]
-            self.user_group_name = "notify_%s" % self.username
+            self.user_group_name = f"notify_{self.username}"
             await self.channel_layer.group_add(self.user_group_name, self.channel_name)
             await self.accept()
 
     async def disconnect(self, close_code):
         if self.user.is_active:
             await self.channel_layer.group_discard(self.user_group_name, self.channel_name)
-        else:
-            pass
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)

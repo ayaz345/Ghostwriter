@@ -265,9 +265,7 @@ class DomainUpdateHealth(LoginRequiredMixin, View):
         # Determine if ``pk`` is in the kwargs to update just one domain
         self.domain = None
         if "pk" in self.kwargs:
-            pk = self.kwargs.get("pk", None)
-            # Try to get the domain from :model:`shepherd.Domain`
-            if pk:
+            if pk := self.kwargs.get("pk", None):
                 self.domain = get_object_or_404(Domain, pk=pk)
 
     def post(self, request, *args, **kwargs):
@@ -310,9 +308,7 @@ class DomainUpdateDNS(LoginRequiredMixin, View):
         # Determine if ``pk`` is in the kwargs to update just one domain
         self.domain = None
         if "pk" in self.kwargs:
-            pk = self.kwargs.get("pk", None)
-            # Try to get the domain from :model:`shepherd.Domain`
-            if pk:
+            if pk := self.kwargs.get("pk", None):
                 self.domain = get_object_or_404(Domain, pk=pk)
 
     def post(self, request, *args, **kwargs):
@@ -529,7 +525,7 @@ def domain_list(request):
     if search_term:
         messages.success(
             request,
-            "Showing search results for: {}".format(search_term),
+            f"Showing search results for: {search_term}",
             extra_tags="alert-success",
         )
         domains_list = (
@@ -675,8 +671,11 @@ def user_assets(request):
         domain_status__domain_status="Unavailable"
     )
     for domain in unavailable_domains:
-        domain_history = History.objects.filter(domain=domain).order_by("end_date").last()
-        if domain_history:
+        if (
+            domain_history := History.objects.filter(domain=domain)
+            .order_by("end_date")
+            .last()
+        ):
             if domain_history.operator == request.user:
                 domains.append(domain_history)
     # Fetch the server history for the current user
@@ -685,8 +684,11 @@ def user_assets(request):
         server_status__server_status="Unavailable"
     )
     for server in unavailable_servers:
-        server_history = ServerHistory.objects.filter(server=server).order_by("end_date").last()
-        if server_history:
+        if (
+            server_history := ServerHistory.objects.filter(server=server)
+            .order_by("end_date")
+            .last()
+        ):
             if server_history.operator == request.user:
                 servers.append(server_history)
     # Pass the context on to the custom HTML
@@ -800,125 +802,125 @@ def update(request):
     :template:`shepherd/update.html`
     """
     # Check if the request is a GET
-    if request.method == "GET":
-        # Get relevant configuration settings
-        vt_config = VirusTotalConfiguration.get_solo()
-        enable_vt = vt_config.enable
-        sleep_time = vt_config.sleep_time
-        cloud_config = CloudServicesConfiguration.get_solo()
-        enable_cloud_monitor = cloud_config.enable
-        namecheap_config = NamecheapConfiguration.get_solo()
-        enable_namecheap = namecheap_config.enable
+    if request.method != "GET":
+        return HttpResponseRedirect(reverse("shepherd:update"))
+    # Get relevant configuration settings
+    vt_config = VirusTotalConfiguration.get_solo()
+    enable_vt = vt_config.enable
+    sleep_time = vt_config.sleep_time
+    cloud_config = CloudServicesConfiguration.get_solo()
+    enable_cloud_monitor = cloud_config.enable
+    namecheap_config = NamecheapConfiguration.get_solo()
+    enable_namecheap = namecheap_config.enable
 
-        # Collect data for category updates
-        cat_last_update_completed = ""
-        cat_last_update_time = ""
-        cat_last_result = ""
-        try:
-            expired_status = DomainStatus.objects.get(domain_status="Expired")
-        except DomainStatus.DoesNotExist:
-            expired_status = None
-        total_domains = Domain.objects.all().exclude(domain_status=expired_status).count()
-        try:
-            update_time = round(total_domains * sleep_time / 60, 2)
-        except ZeroDivisionError:
-            update_time = total_domains
-        try:
-            # Get the latest completed task from `Domain Updates`
-            queryset = Task.objects.filter(group="Domain Updates")[0]
-            # Get the task's start date and time
-            cat_last_update_requested = queryset.started
-            # Get the task's completed time
-            cat_last_result = queryset.result
-            # Check if the task was flagged as successful or failed
-            if queryset.success:
-                cat_last_update_completed = queryset.stopped
-                cat_last_update_time = round(queryset.time_taken() / 60, 2)
-            else:
-                cat_last_update_completed = "Failed"
-        except IndexError:
-            cat_last_update_requested = "Updates Have Not Been Run Yet"
-
-        # Collect data for DNS updates
-        dns_last_update_completed = ""
-        dns_last_update_time = ""
-        dns_last_result = ""
-        try:
-            queryset = Task.objects.filter(group="DNS Updates")[0]
-            dns_last_update_requested = queryset.started
-            dns_last_result = queryset.result
-            if queryset.success:
-                dns_last_update_completed = queryset.stopped
-                dns_last_update_time = round(queryset.time_taken() / 60, 2)
-            else:
-                dns_last_update_completed = "Failed"
-        except IndexError:
-            dns_last_update_requested = "Updates Have Not Been Run Yet"
-
-        # Collect data for Namecheap updates
-        namecheap_last_update_completed = ""
-        namecheap_last_update_time = ""
-        namecheap_last_result = ""
-        if enable_namecheap:
-            try:
-                queryset = Task.objects.filter(group="Namecheap Update")[0]
-                namecheap_last_update_requested = queryset.started
-                namecheap_last_result = queryset.result
-                if queryset.success:
-                    namecheap_last_update_completed = queryset.stopped
-                    namecheap_last_update_time = round(queryset.time_taken() / 60, 2)
-                else:
-                    namecheap_last_update_completed = "Failed"
-            except IndexError:
-                namecheap_last_update_requested = "Namecheap Sync Has Not Been Run Yet"
+    # Collect data for category updates
+    cat_last_update_completed = ""
+    cat_last_update_time = ""
+    cat_last_result = ""
+    try:
+        expired_status = DomainStatus.objects.get(domain_status="Expired")
+    except DomainStatus.DoesNotExist:
+        expired_status = None
+    total_domains = Domain.objects.all().exclude(domain_status=expired_status).count()
+    try:
+        update_time = round(total_domains * sleep_time / 60, 2)
+    except ZeroDivisionError:
+        update_time = total_domains
+    try:
+        # Get the latest completed task from `Domain Updates`
+        queryset = Task.objects.filter(group="Domain Updates")[0]
+        # Get the task's start date and time
+        cat_last_update_requested = queryset.started
+        # Get the task's completed time
+        cat_last_result = queryset.result
+        # Check if the task was flagged as successful or failed
+        if queryset.success:
+            cat_last_update_completed = queryset.stopped
+            cat_last_update_time = round(queryset.time_taken() / 60, 2)
         else:
-            namecheap_last_update_requested = "Namecheap Syncing is Disabled"
+            cat_last_update_completed = "Failed"
+    except IndexError:
+        cat_last_update_requested = "Updates Have Not Been Run Yet"
 
-        # Collect data for cloud monitoring
-        cloud_last_update_completed = ""
-        cloud_last_update_time = ""
-        cloud_last_result = ""
-        if enable_cloud_monitor:
-            try:
-                queryset = Task.objects.filter(group="Cloud Infrastructure Review")[0]
-                cloud_last_update_requested = queryset.started
-                cloud_last_result = queryset.result
-                if queryset.success:
-                    cloud_last_update_completed = queryset.stopped
-                    cloud_last_update_time = round(queryset.time_taken() / 60, 2)
-                else:
-                    cloud_last_update_completed = "Failed"
-            except IndexError:
-                cloud_last_update_requested = "Cloud Review Has Not Been Run Yet"
+    # Collect data for DNS updates
+    dns_last_update_completed = ""
+    dns_last_update_time = ""
+    dns_last_result = ""
+    try:
+        queryset = Task.objects.filter(group="DNS Updates")[0]
+        dns_last_update_requested = queryset.started
+        dns_last_result = queryset.result
+        if queryset.success:
+            dns_last_update_completed = queryset.stopped
+            dns_last_update_time = round(queryset.time_taken() / 60, 2)
         else:
-            cloud_last_update_requested = "Cloud Services are Disabled"
-        # Assemble context for the page
-        context = {
-            "total_domains": total_domains,
-            "update_time": update_time,
-            "enable_vt": enable_vt,
-            "sleep_time": sleep_time,
-            "cat_last_update_requested": cat_last_update_requested,
-            "cat_last_update_completed": cat_last_update_completed,
-            "cat_last_update_time": cat_last_update_time,
-            "cat_last_result": cat_last_result,
-            "dns_last_update_requested": dns_last_update_requested,
-            "dns_last_update_completed": dns_last_update_completed,
-            "dns_last_update_time": dns_last_update_time,
-            "dns_last_result": dns_last_result,
-            "enable_namecheap": enable_namecheap,
-            "namecheap_last_update_requested": namecheap_last_update_requested,
-            "namecheap_last_update_completed": namecheap_last_update_completed,
-            "namecheap_last_update_time": namecheap_last_update_time,
-            "namecheap_last_result": namecheap_last_result,
-            "enable_cloud_monitor": enable_cloud_monitor,
-            "cloud_last_update_requested": cloud_last_update_requested,
-            "cloud_last_update_completed": cloud_last_update_completed,
-            "cloud_last_update_time": cloud_last_update_time,
-            "cloud_last_result": cloud_last_result,
-        }
-        return render(request, "shepherd/update.html", context=context)
-    return HttpResponseRedirect(reverse("shepherd:update"))
+            dns_last_update_completed = "Failed"
+    except IndexError:
+        dns_last_update_requested = "Updates Have Not Been Run Yet"
+
+    # Collect data for Namecheap updates
+    namecheap_last_update_completed = ""
+    namecheap_last_update_time = ""
+    namecheap_last_result = ""
+    if enable_namecheap:
+        try:
+            queryset = Task.objects.filter(group="Namecheap Update")[0]
+            namecheap_last_update_requested = queryset.started
+            namecheap_last_result = queryset.result
+            if queryset.success:
+                namecheap_last_update_completed = queryset.stopped
+                namecheap_last_update_time = round(queryset.time_taken() / 60, 2)
+            else:
+                namecheap_last_update_completed = "Failed"
+        except IndexError:
+            namecheap_last_update_requested = "Namecheap Sync Has Not Been Run Yet"
+    else:
+        namecheap_last_update_requested = "Namecheap Syncing is Disabled"
+
+    # Collect data for cloud monitoring
+    cloud_last_update_completed = ""
+    cloud_last_update_time = ""
+    cloud_last_result = ""
+    if enable_cloud_monitor:
+        try:
+            queryset = Task.objects.filter(group="Cloud Infrastructure Review")[0]
+            cloud_last_update_requested = queryset.started
+            cloud_last_result = queryset.result
+            if queryset.success:
+                cloud_last_update_completed = queryset.stopped
+                cloud_last_update_time = round(queryset.time_taken() / 60, 2)
+            else:
+                cloud_last_update_completed = "Failed"
+        except IndexError:
+            cloud_last_update_requested = "Cloud Review Has Not Been Run Yet"
+    else:
+        cloud_last_update_requested = "Cloud Services are Disabled"
+    # Assemble context for the page
+    context = {
+        "total_domains": total_domains,
+        "update_time": update_time,
+        "enable_vt": enable_vt,
+        "sleep_time": sleep_time,
+        "cat_last_update_requested": cat_last_update_requested,
+        "cat_last_update_completed": cat_last_update_completed,
+        "cat_last_update_time": cat_last_update_time,
+        "cat_last_result": cat_last_result,
+        "dns_last_update_requested": dns_last_update_requested,
+        "dns_last_update_completed": dns_last_update_completed,
+        "dns_last_update_time": dns_last_update_time,
+        "dns_last_result": dns_last_result,
+        "enable_namecheap": enable_namecheap,
+        "namecheap_last_update_requested": namecheap_last_update_requested,
+        "namecheap_last_update_completed": namecheap_last_update_completed,
+        "namecheap_last_update_time": namecheap_last_update_time,
+        "namecheap_last_result": namecheap_last_result,
+        "enable_cloud_monitor": enable_cloud_monitor,
+        "cloud_last_update_requested": cloud_last_update_requested,
+        "cloud_last_update_completed": cloud_last_update_completed,
+        "cloud_last_update_time": cloud_last_update_time,
+        "cloud_last_result": cloud_last_result,
+    }
+    return render(request, "shepherd/update.html", context=context)
 
 
 @login_required

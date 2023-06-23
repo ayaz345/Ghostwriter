@@ -451,8 +451,7 @@ class DomainExportViewTests(TestCase):
         cls.user = UserFactory(password=PASSWORD)
         cls.num_of_domains = 10
         cls.domains = []
-        for domain_id in range(cls.num_of_domains):
-            cls.domains.append(DomainFactory())
+        cls.domains.extend(DomainFactory() for _ in range(cls.num_of_domains))
         cls.uri = reverse("shepherd:export_domains_to_csv")
 
     def setUp(self):
@@ -883,8 +882,7 @@ class ServerExportViewTests(TestCase):
         cls.user = UserFactory(password=PASSWORD)
         cls.num_of_servers = 10
         cls.servers = []
-        for server_id in range(cls.num_of_servers):
-            cls.servers.append(StaticServerFactory())
+        cls.servers.extend(StaticServerFactory() for _ in range(cls.num_of_servers))
         cls.uri = reverse("shepherd:export_servers_to_csv")
 
     def setUp(self):
@@ -1318,7 +1316,7 @@ class UserAssetsViewTests(TestCase):
         domain_status = DomainStatusFactory(domain_status="Unavailable")
         server_status = ServerStatusFactory(server_status="Unavailable")
 
-        for x in range(3):
+        for _ in range(3):
             HistoryFactory(operator=cls.user, domain=DomainFactory(domain_status=domain_status))
             ServerHistoryFactory(
                 operator=cls.user,
@@ -1427,7 +1425,7 @@ class InfrastructureSearchViewTests(TestCase):
         self.assertEqual(response.context["total_result"], 3)
 
     def test_blank_search(self):
-        response = self.client_auth.get(self.uri + "?query=")
+        response = self.client_auth.get(f"{self.uri}?query=")
         self.assertEqual(response.status_code, 200)
 
     def test_search_with_zero_results(self):
@@ -1477,7 +1475,7 @@ class LoadProjectsViewTests(TestCase):
     def setUpTestData(cls):
         cls.org = ClientFactory()
         cls.user = UserFactory(password=PASSWORD)
-        cls.uri = reverse("shepherd:ajax_load_projects") + "?client=%s" % cls.org.id
+        cls.uri = reverse("shepherd:ajax_load_projects") + f"?client={cls.org.id}"
 
     def setUp(self):
         self.client = Client()
@@ -1501,7 +1499,7 @@ class LoadProjectViewTests(TestCase):
     def setUpTestData(cls):
         cls.project = ProjectFactory()
         cls.user = UserFactory(password=PASSWORD)
-        cls.uri = reverse("shepherd:ajax_load_project") + "?project=%s" % cls.project.id
+        cls.uri = reverse("shepherd:ajax_load_project") + f"?project={cls.project.id}"
 
     def setUp(self):
         self.client = Client()

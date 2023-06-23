@@ -162,9 +162,10 @@ def ajax_update_project_objectives(request):
             ignore = ["placeholder", "ignore"]
             counter = 1
             for objective_id in order:
-                if not any(name in objective_id for name in ignore):
-                    obj_instance = ProjectObjective.objects.get(id=objective_id)
-                    if obj_instance:
+                if all(name not in objective_id for name in ignore):
+                    if obj_instance := ProjectObjective.objects.get(
+                        id=objective_id
+                    ):
                         obj_instance.priority = priority
                         obj_instance.position = counter
                         obj_instance.save()
@@ -177,7 +178,7 @@ def ajax_update_project_objectives(request):
                 else:
                     logger.info("Ignored data-id value %s", objective_id)
         else:
-            data = {"result": "specified priority, {}, is invalid".format(priority_class)}
+            data = {"result": f"specified priority, {priority_class}, is invalid"}
     else:
         data = {"result": "error"}
     return JsonResponse(data)
@@ -750,10 +751,8 @@ class ProjectScopeExport(LoginRequiredMixin, SingleObjectMixin, View):
     model = ProjectScope
 
     def get(self, *args, **kwargs):
-        lines = []
         self.object = self.get_object()
-        for row in self.object.scope.split("\n"):
-            lines.append(row)
+        lines = list(self.object.scope.split("\n"))
         response = HttpResponse(lines, content_type="text/plain")
         response["Content-Disposition"] = f"attachment; filename={self.object.name}_scope.txt"
         return response
@@ -815,7 +814,7 @@ def client_list(request):
     if search_term:
         messages.success(
             request,
-            "Displaying search results for: {}".format(search_term),
+            f"Displaying search results for: {search_term}",
             extra_tags="alert-success",
         )
         clients = Client.objects.filter(name__icontains=search_term).order_by("name")
@@ -882,17 +881,12 @@ class ClientDetailView(LoginRequiredMixin, DetailView):
         domain_history = History.objects.select_related("domain").filter(client=client_instance)
         server_history = ServerHistory.objects.select_related("server").filter(client=client_instance)
         projects = Project.objects.filter(client=client_instance)
-        client_domains = []
-        for domain in domain_history:
-            client_domains.append(domain)
-        client_servers = []
-        for server in server_history:
-            client_servers.append(server)
+        client_domains = list(domain_history)
+        client_servers = list(server_history)
         client_vps = []
         for project in projects:
             vps_queryset = TransientServer.objects.filter(project=project)
-            for vps in vps_queryset:
-                client_vps.append(vps)
+            client_vps.extend(iter(vps_queryset))
         ctx["domains"] = client_domains
         ctx["servers"] = client_servers
         ctx["vps"] = client_vps
@@ -1219,9 +1213,7 @@ class ProjectCreate(LoginRequiredMixin, CreateView):
         self.client = ""
         # Determine if ``pk`` is in the kwargs
         if "pk" in self.kwargs:
-            pk = self.kwargs.get("pk")
-            # Try to get the client from :model:`rolodex.Client`
-            if pk:
+            if pk := self.kwargs.get("pk"):
                 self.client = get_object_or_404(Client, pk=self.kwargs.get("pk"))
 
     def get_success_url(self):

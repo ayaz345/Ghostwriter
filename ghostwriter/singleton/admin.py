@@ -36,13 +36,13 @@ class SingletonModelAdmin(admin.ModelAdmin):
                 r"^history/$",
                 self.admin_site.admin_view(self.history_view),
                 {"object_id": str(self.singleton_instance_id)},
-                name="%s_history" % url_name_prefix,
+                name=f"{url_name_prefix}_history",
             ),
             re_path(
                 r"^$",
                 self.admin_site.admin_view(self.change_view),
                 {"object_id": str(self.singleton_instance_id)},
-                name="%s_change" % url_name_prefix,
+                name=f"{url_name_prefix}_change",
             ),
         ]
         # By inserting the custom URLs first, we overwrite the standard URLs.

@@ -128,7 +128,7 @@ class CheckoutForm(forms.ModelForm):
         return end_date
 
     def clean_domain(self):
-        insert = bool(self.instance.pk is None)
+        insert = self.instance.pk is None
         domain = self.cleaned_data["domain"]
 
         if insert:
@@ -386,14 +386,13 @@ class DomainNoteForm(forms.ModelForm):
         )
 
     def clean_note(self):
-        note = self.cleaned_data["note"]
-        # Check if note is empty
-        if not note:
+        if note := self.cleaned_data["note"]:
+            return note
+        else:
             raise ValidationError(
                 _("You must provide some content for the note"),
                 code="required",
             )
-        return note
 
 
 class BurnForm(forms.ModelForm):

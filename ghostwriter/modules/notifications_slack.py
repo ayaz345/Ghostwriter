@@ -168,7 +168,7 @@ class SlackNotification:
         if not tags:
             tags = "None Assigned"
 
-        blocks = [
+        return [
             {
                 "type": "header",
                 "text": {
@@ -203,7 +203,6 @@ class SlackNotification:
                 ],
             },
         ]
-        return blocks
 
     def craft_unknown_asset_msg(
         self,
@@ -239,7 +238,7 @@ class SlackNotification:
         if not tags:
             tags = "None Assigned"
 
-        blocks = [
+        return [
             {
                 "type": "header",
                 "text": {
@@ -277,7 +276,6 @@ class SlackNotification:
                 ],
             },
         ]
-        return blocks
 
     def craft_burned_msg(
         self,
@@ -297,7 +295,7 @@ class SlackNotification:
         ``burned_explanation``
             Explanation of why the domain was burned
         """
-        blocks = [
+        return [
             {
                 "type": "header",
                 "text": {
@@ -326,7 +324,6 @@ class SlackNotification:
                 },
             },
         ]
-        return blocks
 
     def craft_warning_msg(
         self,
@@ -346,7 +343,7 @@ class SlackNotification:
         ``warnings``
             Explanation of the warning
         """
-        blocks = [
+        return [
             {
                 "type": "header",
                 "text": {
@@ -375,7 +372,6 @@ class SlackNotification:
                 },
             },
         ]
-        return blocks
 
     def craft_inactive_log_msg(
         self, oplog: str, project: str, hours_inactive: int, last_entry_date: str = None
@@ -396,7 +392,7 @@ class SlackNotification:
             last_entry_date = f"Last entry was submitted on {last_entry_date} UTC."
         else:
             last_entry_date = "The log contained no entries during this review."
-        blocks = [
+        return [
             {
                 "type": "header",
                 "text": {
@@ -432,7 +428,6 @@ class SlackNotification:
                 },
             },
         ]
-        return blocks
 
 
 def send_slack_complete_msg(task: Task) -> None:

@@ -82,18 +82,18 @@ if len(sys.argv) >= 3:
     domain = "GW"
     fqdn = "GHOSTWRITER.LOCAL"
 
-    addresses = []
     hostnames = []
     random_hosts = []
 
     total = 20
     letters = string.ascii_uppercase
 
-    for i in range(total):
-        addresses.append(socket.inet_ntoa(struct.pack(">I", random.randint(1, 0xFFFFFFFF))))
-
-    for i in range(total):
-        hostname = "".join(random.choice(letters) for n in range(8))
+    addresses = [
+        socket.inet_ntoa(struct.pack(">I", random.randint(1, 0xFFFFFFFF)))
+        for _ in range(total)
+    ]
+    for _ in range(total):
+        hostname = "".join(random.choice(letters) for _ in range(8))
         rand_digit = random.randint(1, 9)
         hostname += str(rand_digit)
         hostnames.append(hostname)
@@ -170,7 +170,7 @@ if len(sys.argv) >= 3:
         data["comments"] = f"Sample log entry #{i}"
         resp = requests.post(url, headers=headers, data=json.dumps(data))
 
-        if not resp.status_code == 201:
+        if resp.status_code != 201:
             print(f"[!] Log creation failed – Received code {resp.status_code}: {resp.text}")
             sys.exit()
 

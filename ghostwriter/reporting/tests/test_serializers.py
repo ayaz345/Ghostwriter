@@ -99,17 +99,12 @@ class ReportDataSerializerTests(TestCase):
         self.assertEqual(totals["team"], self.num_of_assignments)
         self.assertEqual(totals["objectives"], self.num_of_objectives)
 
-        total_scope_lines = 0
-        for scope in report_json["scope"]:
-            total_scope_lines += scope["total"]
-
+        total_scope_lines = sum(scope["total"] for scope in report_json["scope"])
         self.assertEqual(totals["scope"], total_scope_lines)
 
-        completed_objectives = 0
-        for objective in report_json["objectives"]:
-            if objective["complete"]:
-                completed_objectives += 1
-
+        completed_objectives = sum(
+            1 for objective in report_json["objectives"] if objective["complete"]
+        )
         self.assertEqual(totals["objectives_completed"], completed_objectives)
 
         for f in report_json["findings"]:

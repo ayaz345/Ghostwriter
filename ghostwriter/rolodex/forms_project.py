@@ -1160,14 +1160,13 @@ class ProjectNoteForm(forms.ModelForm):
         )
 
     def clean_note(self):
-        note = self.cleaned_data["note"]
-        # Check if note is empty
-        if not note:
+        if note := self.cleaned_data["note"]:
+            return note
+        else:
             raise ValidationError(
                 _("You must provide some content for the note"),
                 code="required",
             )
-        return note
 
 
 class DeconflictionForm(forms.ModelForm):

@@ -1,6 +1,7 @@
 """
 Base settings to build other settings files upon.
 """
+
 # Standard Libraries
 from datetime import timedelta
 from pathlib import Path
@@ -20,8 +21,7 @@ APPS_DIR = ROOT_DIR / "ghostwriter"
 
 env = environ.Env()
 
-READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)
-if READ_DOT_ENV_FILE:
+if READ_DOT_ENV_FILE := env.bool("DJANGO_READ_DOT_ENV_FILE", default=False):
     # OS environment variables take precedence over variables from .env
     env.read_env(str(ROOT_DIR / ".env"))
 
@@ -51,9 +51,7 @@ DATE_FORMAT = env(
 USE_TZ = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#locale-paths
 LOCALE_PATHS = [str(ROOT_DIR / "locale")]
-# https://docs.djangoproject.com/en/dev/ref/settings/#csrf-trusted-origins
-origins = env("DJANGO_CSRF_TRUSTED_ORIGINS", default="")
-if origins:
+if origins := env("DJANGO_CSRF_TRUSTED_ORIGINS", default=""):
     CSRF_TRUSTED_ORIGINS = origins.split(" ")
 
 # DATABASES

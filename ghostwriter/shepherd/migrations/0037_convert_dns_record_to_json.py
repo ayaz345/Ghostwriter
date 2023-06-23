@@ -14,8 +14,9 @@ def convert_to_jsonfield(apps, schema_editor):
         # Run ``Domain`` model's old ``get_list()`` method to convert ``str`` to JSON
         try:
             record = {}
-            json_acceptable_string = entry.dns_record.replace('"', "").replace("'", '"')
-            if json_acceptable_string:
+            if json_acceptable_string := entry.dns_record.replace(
+                '"', ""
+            ).replace("'", '"'):
                 record = json.loads(json_acceptable_string)
             entry.dns = record
             entry.save()

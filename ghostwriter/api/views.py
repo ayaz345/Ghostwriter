@@ -212,61 +212,61 @@ class HasuraCheckoutView(JwtRequiredMixin, HasuraActionView):
             self.project = Project.objects.get(id=project_id)
         except Project.DoesNotExist:
             return JsonResponse(utils.generate_hasura_error_payload("Unauthorized access", "Unauthorized"), status=401)
-        if utils.verify_project_access(self.user_obj, self.project):
-            # Get the target object – :model:`shepherd.Domain` or :model:`shepherd.StaticServer``
-            if "domainId" in self.input:
-                object_id = self.input["domainId"]
-            else:
-                object_id = self.input["serverId"]
-            try:
-                self.object = self.model.objects.get(id=object_id)
-            except (Domain.DoesNotExist, StaticServer.DoesNotExist):
-                return JsonResponse(
-                    utils.generate_hasura_error_payload(
-                        f"{self.model.__name__} does not exist", f"{self.model.__name__}DoesNotExist"
-                    ),
-                    status=400,
-                )
-            # Verify the target object is currently marked as available
-            if self.status_model == DomainStatus:
-                self.unavailable_status = DomainStatus.objects.get(domain_status="Unavailable")
-                if self.object.domain_status == self.unavailable_status:
-                    return JsonResponse(
-                        utils.generate_hasura_error_payload("Domain is unavailable", "DomainUnavailable"), status=400
-                    )
-            else:
-                self.unavailable_status = ServerStatus.objects.get(server_status="Unavailable")
-                if self.object.server_status == self.unavailable_status:
-                    return JsonResponse(
-                        utils.generate_hasura_error_payload("Server is unavailable", "ServerUnavailable"), status=400
-                    )
-            # Get the requested :model:`shepherd.ActivityType` object
-            activity_id = self.input["activityTypeId"]
-            try:
-                self.activity_type = ActivityType.objects.get(id=activity_id)
-            except ActivityType.DoesNotExist:
-                return JsonResponse(
-                    utils.generate_hasura_error_payload("Activity Type does not exist", "ActivityTypeDoesNotExist"),
-                    status=400,
-                )
-            # Validate the provided dates are properly formatted and the start date is before the end date
-            try:
-                self.start_date = parse_date(self.input["startDate"])
-                self.end_date = parse_date(self.input["endDate"])
-            except ParserError:
-                return JsonResponse(
-                    utils.generate_hasura_error_payload("Invalid date values (must be YYYY-MM-DD)", "InvalidDates"),
-                    status=400,
-                )
-            if self.end_date < self.start_date:
-                return JsonResponse(
-                    utils.generate_hasura_error_payload("End date is before start date", "InvalidDates"), status=400
-                )
-            # Set the optional inputs (keys will not always exist)
-            if "note" in self.input:
-                self.note = self.input["note"]
-        else:
+        if not utils.verify_project_access(self.user_obj, self.project):
             return JsonResponse(utils.generate_hasura_error_payload("Unauthorized access", "Unauthorized"), status=401)
+            # Get the target object – :model:`shepherd.Domain` or :model:`shepherd.StaticServer``
+        object_id = (
+            self.input["domainId"]
+            if "domainId" in self.input
+            else self.input["serverId"]
+        )
+        try:
+            self.object = self.model.objects.get(id=object_id)
+        except (Domain.DoesNotExist, StaticServer.DoesNotExist):
+            return JsonResponse(
+                utils.generate_hasura_error_payload(
+                    f"{self.model.__name__} does not exist", f"{self.model.__name__}DoesNotExist"
+                ),
+                status=400,
+            )
+        # Verify the target object is currently marked as available
+        if self.status_model == DomainStatus:
+            self.unavailable_status = DomainStatus.objects.get(domain_status="Unavailable")
+            if self.object.domain_status == self.unavailable_status:
+                return JsonResponse(
+                    utils.generate_hasura_error_payload("Domain is unavailable", "DomainUnavailable"), status=400
+                )
+        else:
+            self.unavailable_status = ServerStatus.objects.get(server_status="Unavailable")
+            if self.object.server_status == self.unavailable_status:
+                return JsonResponse(
+                    utils.generate_hasura_error_payload("Server is unavailable", "ServerUnavailable"), status=400
+                )
+        # Get the requested :model:`shepherd.ActivityType` object
+        activity_id = self.input["activityTypeId"]
+        try:
+            self.activity_type = ActivityType.objects.get(id=activity_id)
+        except ActivityType.DoesNotExist:
+            return JsonResponse(
+                utils.generate_hasura_error_payload("Activity Type does not exist", "ActivityTypeDoesNotExist"),
+                status=400,
+            )
+        # Validate the provided dates are properly formatted and the start date is before the end date
+        try:
+            self.start_date = parse_date(self.input["startDate"])
+            self.end_date = parse_date(self.input["endDate"])
+        except ParserError:
+            return JsonResponse(
+                utils.generate_hasura_error_payload("Invalid date values (must be YYYY-MM-DD)", "InvalidDates"),
+                status=400,
+            )
+        if self.end_date < self.start_date:
+            return JsonResponse(
+                utils.generate_hasura_error_payload("End date is before start date", "InvalidDates"), status=400
+            )
+        # Set the optional inputs (keys will not always exist)
+        if "note" in self.input:
+            self.note = self.input["note"]
 
 
 class HasuraCheckoutDeleteView(JwtRequiredMixin, HasuraActionView):
@@ -418,10 +418,7 @@ class GraphqlLoginAction(HasuraActionView):
     ]
 
     def post(self, request, *args, **kwargs):
-        # Authenticate the user with Django's back-end
-        user = authenticate(**self.input)
-        # A successful auth will return a ``User`` object
-        if user:
+        if user := authenticate(**self.input):
             payload, jwt_token = utils.generate_jwt(user)
             data = {"token": f"{jwt_token}", "expires": payload["exp"]}
         else:
@@ -501,10 +498,7 @@ class GraphqlCheckoutDomain(HasuraCheckoutView):
     ]
 
     def post(self, request, *args, **kwargs):
-        # Run validation on the input with in ``HasuraCheckoutView.post()``
-        result = super().post(request, *args, **kwargs)
-        # If validation fails, return the error response
-        if result:
+        if result := super().post(request, *args, **kwargs):
             return result
         # Otherwise, continue with the logic specific to this checkout action
         expired = self.object.expiration < date.today()
@@ -552,10 +546,7 @@ class GraphqlCheckoutServer(HasuraCheckoutView):
     ]
 
     def post(self, request, *args, **kwargs):
-        # Run validation on the input with in ``HasuraCheckoutView.post()``
-        result = super().post(request, *args, **kwargs)
-        # If validation fails, return the error response
-        if result:
+        if result := super().post(request, *args, **kwargs):
             return result
         role_id = self.input["serverRoleId"]
         try:

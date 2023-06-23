@@ -447,14 +447,13 @@ class ProjectObjective(models.Model):
         and any status of related :model:`ProjectSubTask` entries.
         """
         total_tasks = self.projectsubtask_set.all().count()
-        completed_tasks = 0
         if self.complete:
             return 100.0
 
         if total_tasks > 0:
-            for task in self.projectsubtask_set.all():
-                if task.complete:
-                    completed_tasks += 1
+            completed_tasks = sum(
+                1 for task in self.projectsubtask_set.all() if task.complete
+            )
             return round(completed_tasks / total_tasks * 100, 1)
 
         return 0
@@ -611,9 +610,7 @@ class ProjectScope(models.Model):
     def count_lines_str(self):
         """Returns the number of lines in the scope list as a string."""
         count = len(self.scope.splitlines())
-        if count > 1:
-            return f"{count} Lines"
-        return f"{count} Line"
+        return f"{count} Lines" if count > 1 else f"{count} Line"
 
 
 class ProjectTarget(models.Model):

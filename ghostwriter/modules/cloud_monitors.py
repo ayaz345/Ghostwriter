@@ -33,7 +33,7 @@ class BearerAuth(requests.auth.AuthBase):
         self.token = token
 
     def __call__(self, r):
-        r.headers["Authorization"] = "Bearer " + self.token
+        r.headers["Authorization"] = f"Bearer {self.token}"
         return r
 
 
@@ -151,7 +151,7 @@ def fetch_aws_ec2(aws_key, aws_secret, ignore_tags=None, only_running=False):
                     # Calculate how long the instance has been running in UTC
                     time_up = months_between(
                         instance.launch_time.replace(tzinfo=utc),
-                        datetime.today().replace(tzinfo=utc),
+                        datetime.now().replace(tzinfo=utc),
                     )
                     tags = []
                     name = "Blank"
@@ -162,7 +162,7 @@ def fetch_aws_ec2(aws_key, aws_secret, ignore_tags=None, only_running=False):
                             if tag["Key"] == "Name":
                                 name = tag["Value"]
                             else:
-                                tags.append("{}: {}".format(tag["Key"], tag["Value"]))
+                                tags.append(f'{tag["Key"]}: {tag["Value"]}')
                             # Check for "ignore tags"
                             if tag["Key"] in ignore_tags or tag["Value"] in ignore_tags:
                                 ignore = True
@@ -176,17 +176,19 @@ def fetch_aws_ec2(aws_key, aws_secret, ignore_tags=None, only_running=False):
                     instances.append(
                         {
                             "id": instance.id,
-                            "provider": "Amazon Web Services {}".format(region),
+                            "provider": f"Amazon Web Services {region}",
                             "service": "EC2",
                             "name": name,
                             "type": instance.instance_type,
-                            "monthly_cost": None,  # AWS cost is different and not easily calculated
-                            "cost_to_date": None,  # AWS cost is different and not easily calculated
+                            "monthly_cost": None,
+                            "cost_to_date": None,
                             "state": instance.state["Name"],
                             "private_ip": priv_addresses,
                             "public_ip": pub_addresses,
-                            "launch_time": instance.launch_time.replace(tzinfo=utc),
-                            "time_up": "{} months".format(time_up),
+                            "launch_time": instance.launch_time.replace(
+                                tzinfo=utc
+                            ),
+                            "time_up": f"{time_up} months",
                             "tags": ", ".join(tags),
                             "ignore": ignore,
                         }
@@ -253,7 +255,7 @@ def fetch_aws_lightsail(aws_key, aws_secret, ignore_tags=None):
                 # Calculate how long the instance has been running in UTC
                 time_up = months_between(
                     instance["createdAt"].replace(tzinfo=utc),
-                    datetime.today().replace(tzinfo=utc),
+                    datetime.now().replace(tzinfo=utc),
                 )
                 tags = []
                 name = "Blank"
@@ -264,7 +266,7 @@ def fetch_aws_lightsail(aws_key, aws_secret, ignore_tags=None):
                         if tag["Key"] == "Name":
                             name = tag["Value"]
                         else:
-                            tags.append("{}: {}".format(tag["Key"], tag["Value"]))
+                            tags.append(f'{tag["Key"]}: {tag["Value"]}')
                         # Check for "ignore tags"
                         if tag["Key"] in ignore_tags or tag["Value"] in ignore_tags:
                             ignore = True
@@ -274,17 +276,19 @@ def fetch_aws_lightsail(aws_key, aws_secret, ignore_tags=None):
                 instances.append(
                     {
                         "id": instance["name"],
-                        "provider": "Amazon Web Services {}".format(region),
+                        "provider": f"Amazon Web Services {region}",
                         "service": "Lightsail",
                         "name": name,
                         "type": instance["resourceType"],
-                        "monthly_cost": None,  # AWS cost is different and not easily calculated
-                        "cost_to_date": None,  # AWS cost is different and not easily calculated
+                        "monthly_cost": None,
+                        "cost_to_date": None,
                         "state": instance["state"]["name"],
                         "private_ip": priv_addresses,
                         "public_ip": pub_addresses,
-                        "launch_time": instance["createdAt"].replace(tzinfo=utc),
-                        "time_up": "{} months".format(time_up),
+                        "launch_time": instance["createdAt"].replace(
+                            tzinfo=utc
+                        ),
+                        "time_up": f"{time_up} months",
                         "tags": ", ".join(tags),
                         "ignore": ignore,
                     }
@@ -327,12 +331,12 @@ def fetch_aws_s3(aws_key, aws_secret, ignore_tags=None):
         # List all buckets
         bucket_iterator = s3.list_buckets()
 
+        # Ignore is hard-coded to True for now – until S3 buckets are trackable
+        ignore = True
         for bucket in bucket_iterator["Buckets"]:
-            # Ignore is hard-coded to True for now – until S3 buckets are trackable
-            ignore = True
             time_up = months_between(
                 bucket["CreationDate"].replace(tzinfo=utc),
-                datetime.today().replace(tzinfo=utc),
+                datetime.now().replace(tzinfo=utc),
             )
             buckets.append(
                 {
@@ -341,13 +345,13 @@ def fetch_aws_s3(aws_key, aws_secret, ignore_tags=None):
                     "service": "S3",
                     "name": bucket["Name"],
                     "type": "Bucket",
-                    "monthly_cost": None,  # AWS cost is different and not easily calculated
-                    "cost_to_date": None,  # AWS cost is different and not easily calculated
+                    "monthly_cost": None,
+                    "cost_to_date": None,
                     "state": None,
                     "private_ip": [],
                     "public_ip": [],
                     "launch_time": bucket["CreationDate"].replace(tzinfo=utc),
-                    "time_up": "{} months".format(time_up),
+                    "time_up": f"{time_up} months",
                     "tags": "N/A",
                     "ignore": ignore,
                 }
@@ -417,16 +421,9 @@ def fetch_digital_ocean(api_key, ignore_tags=None):
     # Loop over the droplets to generate the info dict
     if capable and "droplets" in active_droplets:
         for droplet in active_droplets["droplets"]:
-            ignore = False
             # Get the networking info
-            if "v4" in droplet["networks"]:
-                ipv4 = droplet["networks"]["v4"]
-            else:
-                ipv4 = []
-            if "v6" in droplet["networks"]:
-                ipv6 = droplet["networks"]["v6"]
-            else:
-                ipv6 = []
+            ipv4 = droplet["networks"]["v4"] if "v4" in droplet["networks"] else []
+            ipv6 = droplet["networks"]["v6"] if "v6" in droplet["networks"] else []
             # Create lists of public and private addresses
             pub_addresses = []
             priv_addresses = []
@@ -442,20 +439,21 @@ def fetch_digital_ocean(api_key, ignore_tags=None):
                     pub_addresses.append(address["ip_address"])
             # Calculate how long the instance has been running in UTC and cost to date
             time_up = months_between(
-                datetime.strptime(droplet["created_at"].split("T")[0], "%Y-%m-%d").replace(tzinfo=utc),
-                datetime.today().replace(tzinfo=utc),
+                datetime.strptime(
+                    droplet["created_at"].split("T")[0], "%Y-%m-%d"
+                ).replace(tzinfo=utc),
+                datetime.now().replace(tzinfo=utc),
             )
             cost_to_date = (
                 months_between(
-                    datetime.strptime(droplet["created_at"].split("T")[0], "%Y-%m-%d"),
-                    datetime.today(),
+                    datetime.strptime(
+                        droplet["created_at"].split("T")[0], "%Y-%m-%d"
+                    ),
+                    datetime.now(),
                 )
                 * droplet["size"]["price_monthly"]
             )
-            # Check for "ignore tags"
-            for tag in droplet["tags"]:
-                if tag in ignore_tags:
-                    ignore = True
+            ignore = any(tag in ignore_tags for tag in droplet["tags"])
             # Add an entry to the dict for the droplet
             instances.append(
                 {
@@ -463,16 +461,18 @@ def fetch_digital_ocean(api_key, ignore_tags=None):
                     "provider": "Digital Ocean",
                     "service": "Droplets",
                     "name": droplet["name"],
-                    "type": droplet["image"]["distribution"] + " " + droplet["image"]["name"],
+                    "type": droplet["image"]["distribution"]
+                    + " "
+                    + droplet["image"]["name"],
                     "monthly_cost": droplet["size"]["price_monthly"],
                     "cost_to_date": cost_to_date,
                     "state": droplet["status"],
                     "private_ip": priv_addresses,
                     "public_ip": pub_addresses,
-                    "launch_time": datetime.strptime(droplet["created_at"].split("T")[0], "%Y-%m-%d").replace(
-                        tzinfo=utc
-                    ),
-                    "time_up": "{} months".format(time_up),
+                    "launch_time": datetime.strptime(
+                        droplet["created_at"].split("T")[0], "%Y-%m-%d"
+                    ).replace(tzinfo=utc),
+                    "time_up": f"{time_up} months",
                     "tags": ", ".join(droplet["tags"]),
                     "ignore": ignore,
                 }

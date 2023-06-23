@@ -38,8 +38,7 @@ def delete_oplog_entry(entry_id):
 
 @database_sync_to_async
 def copy_oplog_entry(entry_id):
-    entry = OplogEntry.objects.get(pk=entry_id)
-    if entry:
+    if entry := OplogEntry.objects.get(pk=entry_id):
         copy = deepcopy(entry)
         copy.pk = None
         copy.start_date = make_aware(datetime.utcnow())
@@ -53,14 +52,15 @@ class OplogEntryConsumer(AsyncWebsocketConsumer):
     def get_log_entries(self, oplog_id: int, offset: int) -> ReturnList:
         entries = OplogEntry.objects.filter(oplog_id=oplog_id).order_by("-start_date")
         if len(entries) == offset:
-            serialized_entries = OplogEntrySerializer([], many=True).data
+            return OplogEntrySerializer([], many=True).data
         else:
-            if len(entries) < (offset + 100):
-                serialized_entries = OplogEntrySerializer(entries[offset:], many=True).data
-            else:
-                serialized_entries = OplogEntrySerializer(entries[offset : offset + 100], many=True).data
-
-        return serialized_entries
+            return (
+                OplogEntrySerializer(entries[offset:], many=True).data
+                if len(entries) < (offset + 100)
+                else OplogEntrySerializer(
+                    entries[offset : offset + 100], many=True
+                ).data
+            )
 
     async def send_oplog_entry(self, event):
         await self.send(text_data=event["text"])

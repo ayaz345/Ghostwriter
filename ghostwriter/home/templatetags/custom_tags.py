@@ -25,7 +25,7 @@ def has_group(user, group_name):
     # Get the group from the Group auth model
     group = Group.objects.get(name=group_name)
     # Check if the logged-in user a member of the returned group object
-    return bool(group in user.groups.all())
+    return group in user.groups.all()
 
 
 @register.filter(name="get_groups")
@@ -35,9 +35,7 @@ def get_groups(user):
     an individual :model:`users.User`.
     """
     groups = Group.objects.filter(user=user)
-    group_list = []
-    for group in groups:
-        group_list.append(group.name)
+    group_list = [group.name for group in groups]
     return ", ".join(group_list)
 
 
@@ -70,9 +68,7 @@ def get_reports(request):
     )
     for active_project in active_projects:
         reports = Report.objects.filter(Q(project=active_project.project) & Q(complete=False))
-        for report in reports:
-            active_reports.append(report)
-
+        active_reports.extend(iter(reports))
     return active_reports
 
 

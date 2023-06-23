@@ -34,8 +34,7 @@ class UserDetailView(LoginRequiredMixin, DetailView):
     template_name = "users/profile.html"
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        return ctx
+        return super().get_context_data(**kwargs)
 
     def get_object(self, queryset=None):
         return get_object_or_404(User, username=self.kwargs.get("username"))

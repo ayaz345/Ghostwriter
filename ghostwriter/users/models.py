@@ -64,7 +64,7 @@ class User(AbstractUser):
 
         # Modify display name is the user is disabled.
         if not self.is_active:
-            display_name = "DISABLED – " + display_name
+            display_name = f"DISABLED – {display_name}"
 
         return display_name
 

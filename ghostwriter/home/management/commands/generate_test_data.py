@@ -171,7 +171,11 @@ class Command(BaseCommand):
             projects.append(p)
 
         # Populate projects with activities
-        self.stdout.write(self.style.SUCCESS("[+] Populating %s projects with data..." % NUM_PROJECTS))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"[+] Populating {NUM_PROJECTS} projects with data..."
+            )
+        )
         for p in projects:
             assignments = []
             objectives = []

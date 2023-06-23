@@ -121,35 +121,34 @@ def oplog_entries_import(request):
 
     :template:`oplog/oplog_import.html`
     """
-    if request.method == "POST":
-        oplog_entry_resource = OplogEntryResource()
+    if request.method != "POST":
+        return render(request, "oplog/oplog_import.html")
+    oplog_entry_resource = OplogEntryResource()
 
-        new_entries = request.FILES["csv_file"].read().decode("iso-8859-1")
-        dataset = Dataset()
+    new_entries = request.FILES["csv_file"].read().decode("iso-8859-1")
+    dataset = Dataset()
 
-        imported_data = dataset.load(new_entries, format="csv")
-        result = oplog_entry_resource.import_data(imported_data, dry_run=True)
+    imported_data = dataset.load(new_entries, format="csv")
+    result = oplog_entry_resource.import_data(imported_data, dry_run=True)
 
-        if result.has_errors():
-            row_errors = result.row_errors()
-            for exc in row_errors:
-                messages.error(
-                    request,
-                    f"There was an error in row {exc[0]}: {exc[1][0].error}",
-                    extra_tags="alert-danger",
-                )
-            return HttpResponseRedirect(reverse("oplog:oplog_import"))
-        oplog_entry_resource.import_data(imported_data, format="csv", dry_run=False)
-        # Get the first ``oplog_id`` value to use for a redirect
-        oplog_id = imported_data["oplog_id"][0]
-        messages.success(
-            request,
-            "Successfully imported log data",
-            extra_tags="alert-success",
-        )
-        return HttpResponseRedirect(reverse("oplog:oplog_entries", kwargs={"pk": oplog_id}))
-
-    return render(request, "oplog/oplog_import.html")
+    if result.has_errors():
+        row_errors = result.row_errors()
+        for exc in row_errors:
+            messages.error(
+                request,
+                f"There was an error in row {exc[0]}: {exc[1][0].error}",
+                extra_tags="alert-danger",
+            )
+        return HttpResponseRedirect(reverse("oplog:oplog_import"))
+    oplog_entry_resource.import_data(imported_data, format="csv", dry_run=False)
+    # Get the first ``oplog_id`` value to use for a redirect
+    oplog_id = imported_data["oplog_id"][0]
+    messages.success(
+        request,
+        "Successfully imported log data",
+        extra_tags="alert-success",
+    )
+    return HttpResponseRedirect(reverse("oplog:oplog_entries", kwargs={"pk": oplog_id}))
 
 
 ################
@@ -199,9 +198,7 @@ class OplogCreate(LoginRequiredMixin, CreateView):
         self.project = ""
         # Determine if ``pk`` is in the kwargs
         if "pk" in self.kwargs:
-            pk = self.kwargs.get("pk")
-            # Try to get the project from :model:`rolodex.Project`
-            if pk:
+            if pk := self.kwargs.get("pk"):
                 try:
                     self.project = get_object_or_404(Project, pk=self.kwargs.get("pk"))
                 except Project.DoesNotExist:

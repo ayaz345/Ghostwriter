@@ -45,7 +45,7 @@ def get_scope_preview(value, n):
     ``value``
         Number of lines to return
     """
-    return "\n".join(value.split("\r\n")[0:n])
+    return "\n".join(value.split("\r\n")[:n])
 
 
 @register.filter

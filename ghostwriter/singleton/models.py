@@ -35,8 +35,7 @@ class SingletonModel(models.Model):
         super().delete(*args, **kwargs)
 
     def clear_cache(self):
-        cache_name = getattr(settings, "SOLO_CACHE", settings.SOLO_CACHE)
-        if cache_name:
+        if cache_name := getattr(settings, "SOLO_CACHE", settings.SOLO_CACHE):
             cache = get_cache(cache_name)
             cache_key = self.get_cache_key()
             cache.delete(cache_key)
@@ -53,7 +52,7 @@ class SingletonModel(models.Model):
     @classmethod
     def get_cache_key(cls):
         prefix = getattr(settings, "SOLO_CACHE_PREFIX", settings.SOLO_CACHE_PREFIX)
-        return "%s:%s" % (prefix, cls.__name__.lower())
+        return f"{prefix}:{cls.__name__.lower()}"
 
     @classmethod
     def get_solo(cls):

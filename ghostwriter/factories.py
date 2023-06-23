@@ -90,18 +90,25 @@ class ClientContactFactory(factory.django.DjangoModelFactory):
     client = factory.SubFactory(ClientFactory)
 
 
+
+
 class ProjectTypeFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "rolodex.ProjectType"
 
-    project_type = factory.Sequence(lambda n: "Type %s" % n)
+    project_type = factory.Sequence(lambda n: f"Type {n}")
+
+
+
 
 
 class ProjectRoleFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "rolodex.ProjectRole"
 
-    project_role = factory.Sequence(lambda n: "Type %s" % n)
+    project_role = factory.Sequence(lambda n: f"Type {n}")
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):
@@ -148,19 +155,27 @@ class ProjectAssignmentFactory(factory.django.DjangoModelFactory):
     role = factory.SubFactory(ProjectRoleFactory)
 
 
+
+
 class ObjectiveStatusFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "rolodex.ObjectiveStatus"
 
-    objective_status = factory.Sequence(lambda n: "Status %s" % n)
+    objective_status = factory.Sequence(lambda n: f"Status {n}")
+
+
+
 
 
 class ObjectivePriorityFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "rolodex.ObjectivePriority"
 
-    priority = factory.Sequence(lambda n: "Priority %s" % n)
+    priority = factory.Sequence(lambda n: f"Priority {n}")
     weight = factory.Sequence(lambda n: n)
+
 
 
 class ProjectObjectiveFactory(factory.django.DjangoModelFactory):
@@ -211,22 +226,26 @@ class ProjectTargetFactory(factory.django.DjangoModelFactory):
     project = factory.SubFactory(ProjectFactory)
 
 
-# Reporting Factories
 
 
 class SeverityFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "reporting.Severity"
 
-    severity = factory.Sequence(lambda n: "Severity %s" % n)
+    severity = factory.Sequence(lambda n: f"Severity {n}")
     weight = factory.Sequence(lambda n: n)
 
 
+
+
+
 class FindingTypeFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "reporting.FindingType"
 
-    finding_type = factory.Sequence(lambda n: "Type %s" % n)
+    finding_type = factory.Sequence(lambda n: f"Type {n}")
 
 
 class FindingFactory(factory.django.DjangoModelFactory):
@@ -288,11 +307,12 @@ class ReportTemplateFactory(factory.django.DjangoModelFactory):
 
 
 class ReportDocxTemplateFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "reporting.ReportTemplate"
 
     document = factory.django.FileField(from_path="DOCS/sample_reports/template.docx")
-    name = factory.Sequence(lambda n: "Template %s" % n)
+    name = factory.Sequence(lambda n: f"Template {n}")
     description = Faker("paragraph")
     changelog = Faker("paragraph")
     lint_result = ""
@@ -302,12 +322,16 @@ class ReportDocxTemplateFactory(factory.django.DjangoModelFactory):
     uploaded_by = factory.SubFactory(UserFactory)
 
 
+
+
+
 class ReportPptxTemplateFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "reporting.ReportTemplate"
 
     document = factory.django.FileField(from_path="DOCS/sample_reports/template.pptx")
-    name = factory.Sequence(lambda n: "Template %s" % n)
+    name = factory.Sequence(lambda n: f"Template {n}")
     description = Faker("paragraph")
     changelog = Faker("paragraph")
     lint_result = ""
@@ -374,10 +398,11 @@ class ReportFindingLinkFactory(factory.django.DjangoModelFactory):
 
 
 class BlankReportFindingLinkFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "reporting.ReportFindingLink"
 
-    title = factory.Sequence(lambda n: "Blank Finding %s" % n)
+    title = factory.Sequence(lambda n: f"Blank Finding {n}")
     position = 1
     added_as_blank = True
     assigned_to = factory.SubFactory(UserFactory)
@@ -516,31 +541,44 @@ class OplogEntryFactory(factory.django.DjangoModelFactory):
 
 
 class HealthStatusFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "shepherd.HealthStatus"
 
-    health_status = factory.Sequence(lambda n: "Status %s" % n)
+    health_status = factory.Sequence(lambda n: f"Status {n}")
+
+
+
 
 
 class DomainStatusFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "shepherd.DomainStatus"
 
-    domain_status = factory.Sequence(lambda n: "Status %s" % n)
+    domain_status = factory.Sequence(lambda n: f"Status {n}")
+
+
+
 
 
 class WhoisStatusFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "shepherd.WhoisStatus"
 
-    whois_status = factory.Sequence(lambda n: "Status %s" % n)
+    whois_status = factory.Sequence(lambda n: f"Status {n}")
+
+
+
 
 
 class ActivityTypeFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "shepherd.ActivityType"
 
-    activity = factory.Sequence(lambda n: "Activity %s" % n)
+    activity = factory.Sequence(lambda n: f"Activity {n}")
 
 
 class DomainFactory(factory.django.DjangoModelFactory):
@@ -589,25 +627,37 @@ class HistoryFactory(factory.django.DjangoModelFactory):
     activity_type = factory.SubFactory(ActivityTypeFactory)
 
 
+
+
 class ServerStatusFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "shepherd.ServerStatus"
 
-    server_status = factory.Sequence(lambda n: "Status %s" % n)
+    server_status = factory.Sequence(lambda n: f"Status {n}")
+
+
+
 
 
 class ServerProviderFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "shepherd.ServerProvider"
 
-    server_provider = factory.Sequence(lambda n: "Provider %s" % n)
+    server_provider = factory.Sequence(lambda n: f"Provider {n}")
+
+
+
 
 
 class ServerRoleFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "shepherd.ServerRole"
 
-    server_role = factory.Sequence(lambda n: "Role %s" % n)
+    server_role = factory.Sequence(lambda n: f"Role {n}")
+
 
 
 class StaticServerFactory(factory.django.DjangoModelFactory):
@@ -767,12 +817,16 @@ class GeneralConfigurationFactory(factory.django.DjangoModelFactory):
     default_timezone = random.choice(TIMEZONES)
 
 
+
+
 class DeconflictionStatusFactory(factory.django.DjangoModelFactory):
+
     class Meta:
         model = "rolodex.DeconflictionStatus"
 
-    status = factory.Sequence(lambda n: "Status %s" % n)
+    status = factory.Sequence(lambda n: f"Status {n}")
     weight = factory.Sequence(lambda n: n)
+
 
 
 class DeconflictionFactory(factory.django.DjangoModelFactory):

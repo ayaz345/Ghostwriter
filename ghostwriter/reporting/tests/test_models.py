@@ -361,9 +361,12 @@ class ReportFindingLinkModelTests(TestCase):
     def test_model_cleaning_position(self):
         report = ReportFactory()
         num_of_findings = 10
-        findings = []
-        for finding_id in range(num_of_findings):
-            findings.append(ReportFindingLinkFactory(report=report, severity=self.critical_severity))
+        findings = [
+            ReportFindingLinkFactory(
+                report=report, severity=self.critical_severity
+            )
+            for _ in range(num_of_findings)
+        ]
         # New position values
         first_pos = 1
         second_pos = 2
@@ -386,9 +389,12 @@ class ReportFindingLinkModelTests(TestCase):
     def test_model_cleaning_severity_change(self):
         report = ReportFactory()
         num_of_findings = 10
-        findings = []
-        for finding_id in range(num_of_findings):
-            findings.append(ReportFindingLinkFactory(report=report, severity=self.critical_severity))
+        findings = [
+            ReportFindingLinkFactory(
+                report=report, severity=self.critical_severity
+            )
+            for _ in range(num_of_findings)
+        ]
         # Bump the first half of the findings to the new severity in reverse order
         for f in reversed(range(5)):
             findings[f].severity = self.high_severity
@@ -409,17 +415,16 @@ class ReportFindingLinkModelTests(TestCase):
     def test_model_cleaning_severity_and_position_changes(self):
         report = ReportFactory()
         num_of_findings = 5
-        findings = []
-        for finding_id in range(num_of_findings):
-            findings.append(
-                ReportFindingLinkFactory(report=report, severity=self.critical_severity),
+        findings = [
+            ReportFindingLinkFactory(
+                report=report, severity=self.critical_severity
             )
-
-        for finding_id in range(num_of_findings):
-            findings.append(
-                ReportFindingLinkFactory(report=report, severity=self.high_severity),
-            )
-
+            for _ in range(num_of_findings)
+        ]
+        findings.extend(
+            ReportFindingLinkFactory(report=report, severity=self.high_severity)
+            for _ in range(num_of_findings)
+        )
         # Bounce findings around to shuffle positions several times
         findings[8].severity = self.critical_severity
         findings[8].position = 2
@@ -470,9 +475,12 @@ class ReportFindingLinkModelTests(TestCase):
     def test_position_set_higher_than_count(self):
         report = ReportFactory()
         num_of_findings = 10
-        findings = []
-        for finding_id in range(num_of_findings):
-            findings.append(ReportFindingLinkFactory(report=report, severity=self.critical_severity))
+        findings = [
+            ReportFindingLinkFactory(
+                report=report, severity=self.critical_severity
+            )
+            for _ in range(num_of_findings)
+        ]
         findings[0].position = 100
         findings[0].save()
         findings[0].refresh_from_db()
@@ -482,16 +490,16 @@ class ReportFindingLinkModelTests(TestCase):
     def test_position_change_on_delete(self):
         report = ReportFactory()
         num_of_findings = 5
-        findings = []
-        for finding_id in range(num_of_findings):
-            findings.append(
-                ReportFindingLinkFactory(report=report, severity=self.critical_severity),
+        findings = [
+            ReportFindingLinkFactory(
+                report=report, severity=self.critical_severity
             )
-        for finding_id in range(num_of_findings):
-            findings.append(
-                ReportFindingLinkFactory(report=report, severity=self.high_severity),
-            )
-
+            for _ in range(num_of_findings)
+        ]
+        findings.extend(
+            ReportFindingLinkFactory(report=report, severity=self.high_severity)
+            for _ in range(num_of_findings)
+        )
         # Delete several findings to create gaps in the severity groups
         # Need to use atomic because ``TestCase`` and a ``post_delete`` Signal
         with transaction.atomic():

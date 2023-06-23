@@ -40,7 +40,7 @@ def zip_directory(path, zip_handler):
         for file in files:
             absname = os.path.abspath(os.path.join(root, file))
             arcname = absname[len(abs_src) + 1 :]
-            zip_handler.write(os.path.join(root, file), "evidence/" + arcname)
+            zip_handler.write(os.path.join(root, file), f"evidence/{arcname}")
 
 
 def archive_projects():
@@ -72,15 +72,17 @@ def archive_projects():
                 zf.writestr("report.pptx", ppt_doc.getvalue())
                 zip_directory(evidence_loc, zf)
             zip_buffer.seek(0)
-            with open(os.path.join(archive_loc, report.title + ".zip"), "wb") as archive_file:
+            with open(os.path.join(archive_loc, f"{report.title}.zip"), "wb") as archive_file:
                 archive_file.write(zip_buffer.read())
             new_archive = Archive(
                 project=report.project,
-                report_archive=File(open(os.path.join(archive_loc, report.title + ".zip"), "rb")),
+                report_archive=File(
+                    open(
+                        os.path.join(archive_loc, f"{report.title}.zip"), "rb"
+                    )
+                ),
             )
             new_archive.save()
             report.archived = True
             report.complete = True
             report.save()
-        else:
-            pass

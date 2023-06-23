@@ -54,24 +54,6 @@ def evidence_update(sender, instance, **kwargs):
 
     if hasattr(instance, "_current_friendly_name"):
         if instance._current_friendly_name != instance.friendly_name:
-            ignore = [
-                "id",
-                "evidence",
-                "localfindingnote",
-                "complete",
-                "report",
-                "assigned_to",
-                "finding_type",
-                "tags",
-                "tagged_items",
-                "cvss_score",
-                "cvss_vector",
-                "severity",
-                "added_as_blank",
-                "position",
-                "finding_guidance",
-                "title",
-            ]
             friendly = f"{{{{.{instance.friendly_name}}}}}"
             friendly_ref = f"{{{{.ref {instance.friendly_name}}}}}"
             prev_friendly = f"{{{{.{instance._current_friendly_name}}}}}"
@@ -80,12 +62,29 @@ def evidence_update(sender, instance, **kwargs):
                 logger.info(
                     "Updating content of ReportFindingLink instances with updated name for Evidence %s", instance.id
                 )
+                ignore = [
+                    "id",
+                    "evidence",
+                    "localfindingnote",
+                    "complete",
+                    "report",
+                    "assigned_to",
+                    "finding_type",
+                    "tags",
+                    "tagged_items",
+                    "cvss_score",
+                    "cvss_vector",
+                    "severity",
+                    "added_as_blank",
+                    "position",
+                    "finding_guidance",
+                    "title",
+                ]
                 try:
                     link = ReportFindingLink.objects.get(id=instance.finding.id)
                     for field in link._meta.get_fields():
                         if field.name not in ignore:
-                            current = getattr(link, field.name)
-                            if current:
+                            if current := getattr(link, field.name):
                                 new = current.replace(prev_friendly, friendly)
                                 new = new.replace(prev_friendly_ref, friendly_ref)
                                 setattr(link, field.name, new)
@@ -223,15 +222,12 @@ def adjust_finding_positions_after_delete(sender, instance, **kwargs):
     of entries tied to the same :model:`reporting.Report`.
     """
     try:
-        findings_queryset = ReportFindingLink.objects.filter(
+        if findings_queryset := ReportFindingLink.objects.filter(
             Q(report=instance.report.pk) & Q(severity=instance.severity)
-        )
-        if findings_queryset:
-            counter = 1
-            for finding in findings_queryset:
+        ):
+            for counter, finding in enumerate(findings_queryset, start=1):
                 # Adjust position to close gap created by the removed finding
                 findings_queryset.filter(id=finding.id).update(position=counter)
-                counter += 1
     except Report.DoesNotExist:
         # Report was deleted, so no need to adjust positions
         pass
@@ -252,10 +248,7 @@ def adjust_severity_weight_after_delete(sender, instance, **kwargs):
     After deleting a :model:`reporting.Severity` entry, adjust the ``weight`` values
     of entries.
     """
-    severity_queryset = Severity.objects.all()
-    if severity_queryset:
-        counter = 1
-        for category in severity_queryset:
+    if severity_queryset := Severity.objects.all():
+        for counter, category in enumerate(severity_queryset, start=1):
             # Adjust weight to close gap created by the removed severity category
             severity_queryset.filter(id=category.id).update(weight=counter)
-            counter += 1

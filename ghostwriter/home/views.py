@@ -41,23 +41,20 @@ def update_session(request):
     """
     Update the requesting user's session variable based on ``session_data`` in POST.
     """
-    if request.method == "POST":
-        req_data = request.POST.get("session_data", None)
-        if req_data:
-            if req_data == "sidebar":
-                if "sidebar" in request.session.keys():
-                    request.session["sidebar"]["sticky"] ^= True
-                else:
-                    request.session["sidebar"] = {}
-                    request.session["sidebar"]["sticky"] = True
-            request.session.save()
-        data = {
-            "result": "success",
-            "message": "Session updated",
-        }
-        return JsonResponse(data)
-
-    return HttpResponseNotAllowed(["POST"])
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if req_data := request.POST.get("session_data", None):
+        if req_data == "sidebar":
+            if "sidebar" in request.session.keys():
+                request.session["sidebar"]["sticky"] ^= True
+            else:
+                request.session["sidebar"] = {"sticky": True}
+        request.session.save()
+    data = {
+        "result": "success",
+        "message": "Session updated",
+    }
+    return JsonResponse(data)
 
 
 @login_required

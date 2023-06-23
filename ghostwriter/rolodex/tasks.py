@@ -23,10 +23,8 @@ def check_project_freshness():
         nag_date = project.end_date + datetime.timedelta(1)
         # Check if date is before or is the end date
         if date.today() >= nag_date:
-            message = "{} : This project should now be complete but is not marked as such in Ghostwriter. Extend the end date or mark the project and check that all reports have been marked as completed and delivered.".format(
-                project
-            )
             if slack.enabled:
+                message = f"{project} : This project should now be complete but is not marked as such in Ghostwriter. Extend the end date or mark the project and check that all reports have been marked as completed and delivered."
                 if project.slack_channel:
                     err = slack.send_msg(message, project.slack_channel)
                 else:

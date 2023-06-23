@@ -185,9 +185,7 @@ def verify_graphql_request(headers):
     if hasura_action_secret is None:
         return False
 
-    if hasura_action_secret == settings.HASURA_ACTION_SECRET:
-        return True
-    return False
+    return hasura_action_secret == settings.HASURA_ACTION_SECRET
 
 
 def verify_project_access(user, project):
@@ -210,9 +208,7 @@ def verify_project_access(user, project):
     assignments = ProjectAssignment.objects.filter(operator=user, project=project)
     client_invites = ClientInvite.objects.filter(user=user, client=project.client)
     project_invites = ProjectInvite.objects.filter(user=user, project=project)
-    if any([assignments, client_invites, project_invites]):
-        return True
-    return False
+    return any([assignments, client_invites, project_invites])
 
 
 def get_user_from_token(token):
@@ -224,8 +220,7 @@ def get_user_from_token(token):
     ``token``
         Decoded JWT payload
     """
-    user_obj = User.objects.get(id=token["sub"])
-    return user_obj
+    return User.objects.get(id=token["sub"])
 
 
 def verify_user_is_privileged(user):
@@ -237,9 +232,12 @@ def verify_user_is_privileged(user):
     ``user``
         The :model:`users.User` object
     """
-    if user.role in (
-        "manager",
-        "admin",
-    ):
-        return True
-    return user.is_staff
+    return (
+        True
+        if user.role
+        in (
+            "manager",
+            "admin",
+        )
+        else user.is_staff
+    )

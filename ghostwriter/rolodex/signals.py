@@ -64,12 +64,11 @@ def update_project(sender, instance, **kwargs):
                     },
                 },
             ]
-            err = slack.send_msg(
+            if err := slack.send_msg(
                 "Slack Notifications Configured Successfully",
                 channel=instance.slack_channel,
                 blocks=blocks,
-            )
-            if err:
+            ):
                 logger.warning(
                     "Attempt to send a Slack notification returned an error: %s",
                     err,
@@ -93,12 +92,11 @@ def update_project(sender, instance, **kwargs):
                     },
                 },
             ]
-            err = slack.send_msg(
+            if err := slack.send_msg(
                 "Notifications Updated Successfully",
                 channel=instance.slack_channel,
                 blocks=blocks,
-            )
-            if err:
+            ):
                 logger.warning(
                     "Attempt to send a Slack notification returned an error: %s",
                     err,
@@ -143,12 +141,11 @@ the start date and {abs(end_date_delta)} days for the end date.",
                         },
                     },
                 ]
-                err = slack.send_msg(
+                if err := slack.send_msg(
                     "Updated Project Dates",
                     channel=instance.slack_channel,
                     blocks=blocks,
-                )
-                if err:
+                ):
                     logger.warning(
                         "Attempt to send a Slack notification returned an error: %s",
                         err,

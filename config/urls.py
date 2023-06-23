@@ -1,5 +1,6 @@
 """This contains all of the base URL mappings used by Ghostwriter."""
 
+
 # Django Imports
 from django.conf import settings
 from django.contrib import admin
@@ -17,9 +18,7 @@ from ghostwriter.users.views import (
 
 urlpatterns = [
     path("admin/doc/", include("django.contrib.admindocs.urls")),
-    # Django Admin, use {% url 'admin:index' %}
     path(settings.ADMIN_URL, admin.site.urls),
-    # User management
     path("users/", include("ghostwriter.users.urls", namespace="users")),
     path("home/", include("ghostwriter.home.urls", namespace="home")),
     path(
@@ -33,21 +32,23 @@ urlpatterns = [
         name="account_reset_password_from_key",
     ),
     path("accounts/", include("allauth.urls")),
-    # path("accounts/", include("django.contrib.auth.urls")),
     path("rolodex/", include("ghostwriter.rolodex.urls", namespace="rolodex")),
-    path("shepherd/", include("ghostwriter.shepherd.urls", namespace="shepherd")),
-    path("reporting/", include("ghostwriter.reporting.urls", namespace="reporting")),
+    path(
+        "shepherd/", include("ghostwriter.shepherd.urls", namespace="shepherd")
+    ),
+    path(
+        "reporting/",
+        include("ghostwriter.reporting.urls", namespace="reporting"),
+    ),
     path("", RedirectView.as_view(pattern_name="home:dashboard"), name="home"),
     path("oplog/", include("ghostwriter.oplog.urls", namespace="oplog")),
     re_path(
-        r"^%s(?P<path>.*)$" % settings.MEDIA_URL[1:],
+        f"^{settings.MEDIA_URL[1:]}(?P<path>.*)$",
         protected_serve,
         {"document_root": settings.MEDIA_ROOT},
     ),
     path("api/", include("ghostwriter.api.urls", namespace="api")),
     path("status/", include("ghostwriter.status.urls", namespace="status")),
-    # Add additional custom paths below this line...
-    # Your stuff: custom urls includes go here
 ]
 
 if settings.DEBUG:

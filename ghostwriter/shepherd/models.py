@@ -340,9 +340,11 @@ class History(models.Model):
         """
         Test if the instance's end_date DateField value is within the next 24-48 hours.
         """
-        if date.today() == self.end_date or date.today() == datetime.timedelta(days=1) or date.today() > self.end_date:
-            return True
-        return False
+        return (
+            date.today() == self.end_date
+            or date.today() == datetime.timedelta(days=1)
+            or date.today() > self.end_date
+        )
 
 
 class ServerStatus(models.Model):
@@ -555,9 +557,11 @@ class ServerHistory(models.Model):
         """
         Test if the instance's ``end_date`` DateField value is within the next 24-48 hours.
         """
-        if date.today() == self.end_date or date.today() == datetime.timedelta(days=1) or date.today() > self.end_date:
-            return True
-        return False
+        return (
+            date.today() == self.end_date
+            or date.today() == datetime.timedelta(days=1)
+            or date.today() > self.end_date
+        )
 
 
 class TransientServer(models.Model):

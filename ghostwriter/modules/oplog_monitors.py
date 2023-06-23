@@ -84,17 +84,15 @@ def review_active_logs(hours: int = 24) -> dict:
 
                     logger.info("Sending Slack notification about inactive log to %s", channel)
                     blocks = slack.craft_inactive_log_msg(log.name, log.project, hours, last_activity)
-                    err = slack.send_msg(
+                    if err := slack.send_msg(
                         message=f"This activity log has had no activity in the past {hours} hours",
                         channel=channel,
                         blocks=blocks,
-                    )
-                    if err:
+                    ):
                         logger.warning("Attempt to send a Slack notification returned an error: %s", err)
                         results["errors"].append(err)
             else:
-                if latest_log_entry:
-                    last_activity = dateformat.format(latest_log_entry.start_date, settings.DATE_FORMAT)
+                last_activity = dateformat.format(latest_log_entry.start_date, settings.DATE_FORMAT)
 
             # Record results
             results["logs"].append(

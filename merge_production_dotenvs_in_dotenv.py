@@ -40,7 +40,7 @@ def test_merge(tmpdir_factory, merged_file_count: int, append_linesep: bool):
     for i in range(merged_file_count):
         merged_file_ord = i + 1
 
-        merged_filename = ".service{}".format(merged_file_ord)
+        merged_filename = f".service{merged_file_ord}"
         merged_file_path = os.path.join(tmp_dir_path, merged_filename)
 
         merged_file_content = merged_filename * merged_file_ord

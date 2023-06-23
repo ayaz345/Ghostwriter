@@ -107,16 +107,14 @@ class Severity(models.Model):
                 if self.weight > severity_queryset.count():
                     self.weight = severity_queryset.count()
 
-                counter = 1
                 if severity_queryset:
+                    counter = 1
                     for category in severity_queryset:
-                        if not self.pk == category.pk:
+                        if self.pk != category.pk:
                             if self.weight == counter:
                                 counter += 1
                             severity_queryset.filter(id=category.id).update(weight=counter)
                             counter += 1
-                        else:
-                            pass
                 else:
                     self.weight = 1
         else:
@@ -549,11 +547,7 @@ class ReportFindingLink(models.Model):
 
     def clean(self):
         # Check if this is a new entry or updated
-        if self.pk:
-            old_entry = self.__class__.objects.get(pk=self.pk)
-        else:
-            old_entry = None
-
+        old_entry = self.__class__.objects.get(pk=self.pk) if self.pk else None
         # A ``pre_save`` Signal is connected to this model and runs this ``clean()`` method
         # whenever ``save()`` is called
 
@@ -575,11 +569,9 @@ class ReportFindingLink(models.Model):
 
                 # If severity rating changed, adjust positioning in the previous severity group
                 if old_severity != self.severity:
-                    # Get a list of findings for the old severity rating
-                    old_severity_queryset = ReportFindingLink.objects.filter(
+                    if old_severity_queryset := ReportFindingLink.objects.filter(
                         Q(report__pk=self.report.pk) & Q(severity=old_severity)
-                    ).order_by("position")
-                    if old_severity_queryset:
+                    ).order_by("position"):
                         for finding in old_severity_queryset:
                             # Adjust position to close gap created by moved finding
                             if finding.position > old_position:
@@ -595,23 +587,19 @@ class ReportFindingLink(models.Model):
                 if self.position > finding_queryset.count():
                     self.position = finding_queryset.count()
 
-                counter = 1
                 if finding_queryset:
+                    counter = 1
                     # Loop from top position down and look for a match
                     for finding in finding_queryset:
                         # Check if finding in loop is the finding being updated
-                        if not self.pk == finding.pk:
+                        if self.pk != finding.pk:
                             # Increment position counter when counter equals new value
                             if self.position == counter:
                                 counter += 1
                             finding_queryset.filter(id=finding.id).update(position=counter)
                             counter += 1
-                        else:
-                            pass
-                # No other findings with the chosen severity, so set ``position`` to ``1``
                 else:
                     self.position = 1
-        # Place newly created findings at the end of the current list
         else:
             finding_queryset = ReportFindingLink.objects.filter(
                 Q(report__pk=self.report.pk) & Q(severity=self.severity)

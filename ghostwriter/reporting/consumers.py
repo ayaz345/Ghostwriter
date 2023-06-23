@@ -23,15 +23,13 @@ class ReportConsumer(AsyncWebsocketConsumer):
         self.user = self.scope["user"]
         if self.user.is_active:
             self.report_id = self.scope["url_route"]["kwargs"]["report_id"]
-            self.report_group_name = "report_%s" % self.report_id
+            self.report_group_name = f"report_{self.report_id}"
             await self.channel_layer.group_add(self.report_group_name, self.channel_name)
             await self.accept()
 
     async def disconnect(self, close_code):
         if self.user.is_active:
             await self.channel_layer.group_discard(self.report_group_name, self.channel_name)
-        else:
-            pass
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
@@ -64,15 +62,13 @@ class ReportFindingConsumer(AsyncWebsocketConsumer):
         self.user = self.scope["user"]
         if self.user.is_active:
             self.finding_id = self.scope["url_route"]["kwargs"]["finding_id"]
-            self.finding_group_name = "finding_%s" % self.finding_id
+            self.finding_group_name = f"finding_{self.finding_id}"
             await self.channel_layer.group_add(self.finding_group_name, self.channel_name)
             await self.accept()
 
     async def disconnect(self, close_code):
         if self.user.is_active:
             await self.channel_layer.group_discard(self.finding_group_name, self.channel_name)
-        else:
-            pass
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)

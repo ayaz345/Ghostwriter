@@ -73,9 +73,11 @@ def filter_severity(findings, allowlist):
             f'Allowlist passed into `filter_severity()` filter is not a list ("{allowlist}"); must be like `["Critical", "High"]`'
         )
     try:
-        for finding in findings:
-            if finding["severity"].lower() in allowlist:
-                filtered_values.append(finding)
+        filtered_values.extend(
+            finding
+            for finding in findings
+            if finding["severity"].lower() in allowlist
+        )
     except (KeyError, TypeError):
         logger.exception("Error parsing ``findings`` as a list of dictionaries: %s", findings)
         raise InvalidFilterValue(
@@ -103,9 +105,11 @@ def filter_type(findings, allowlist):
             f'Allowlist passed into `filter_type()` filter is not a list ("{allowlist}"); must be like `["Network", "Web"]`'
         )
     try:
-        for finding in findings:
-            if finding["finding_type"].lower() in allowlist:
-                filtered_values.append(finding)
+        filtered_values.extend(
+            finding
+            for finding in findings
+            if finding["finding_type"].lower() in allowlist
+        )
     except (KeyError, TypeError):
         logger.exception("Error parsing ``findings`` as a list of dictionaries: %s", findings)
         raise InvalidFilterValue(
@@ -145,9 +149,7 @@ def compromised(targets):
     """
     filtered_targets = []
     try:
-        for target in targets:
-            if target["compromised"]:
-                filtered_targets.append(target)
+        filtered_targets.extend(target for target in targets if target["compromised"])
     except (KeyError, TypeError):
         logger.exception("Error parsing ``targets`` as a list of dictionaries: %s", targets)
         raise InvalidFilterValue(
@@ -238,10 +240,14 @@ def get_item(lst, index):
         return lst[index]
     except TypeError:
         logger.exception("Error getting list index %s from this list: %s", index, lst)
-        raise InvalidFilterValue(f"Invalid list or string passed into the `get_item()` filter")
+        raise InvalidFilterValue(
+            "Invalid list or string passed into the `get_item()` filter"
+        )
     except IndexError:
         logger.exception("Error getting index %s from this list: %s", index, lst)
-        raise InvalidFilterValue(f"Invalid or unavailable index passed into the `get_item()` filter")
+        raise InvalidFilterValue(
+            "Invalid or unavailable index passed into the `get_item()` filter"
+        )
 
 
 def prepare_jinja2_env(debug=False):
@@ -362,7 +368,7 @@ class Reportwriter:
         # Conditions ordered by presumed frequency
         return (
             0x20 <= codepoint <= 0xD7FF
-            or codepoint in (0x9, 0xA, 0xD)
+            or codepoint in {0x9, 0xA, 0xD}
             or 0xE000 <= codepoint <= 0xFFFD
             or 0x10000 <= codepoint <= 0x10FFFF
         )
@@ -382,10 +388,7 @@ class Reportwriter:
         # Render the serialized data as JSON
         report_json = JSONRenderer().render(serializer.data)
         report_json = json.loads(report_json)
-        # An extra step to make the JSON "pretty"
-        output = json.dumps(report_json, indent=4)
-
-        return output
+        return json.dumps(report_json, indent=4)
 
     def _make_figure(self, par, ref=None):
         """
@@ -408,10 +411,7 @@ class Reportwriter:
             """Generate a random eight character reference ID."""
             return random.randint(10000000, 99999999)
 
-        if ref:
-            ref = f"_Ref{ref}"
-        else:
-            ref = f"_Ref{generate_ref()}"
+        ref = f"_Ref{ref}" if ref else f"_Ref{generate_ref()}"
         # Start a bookmark run with the figure label
         p = par._p
         bookmark_start = OxmlElement("w:bookmarkStart")
@@ -644,115 +644,113 @@ class Reportwriter:
         ``par`` : Paragraph
             Paragraph meant to hold the evidence
         """
-        file_path = settings.MEDIA_ROOT + "/" + evidence["path"]
+        file_path = f"{settings.MEDIA_ROOT}/" + evidence["path"]
         extension = file_path.split(".")[-1].lower()
 
-        # First, check if the file still exists on disk
-        if os.path.exists(file_path):
-            # Next, check if the file is approved and handle as either text or image
-            if extension in self.text_extensions:
-                with open(file_path, "r") as evidence_contents:
-                    # Read in evidence text
-                    evidence_text = evidence_contents.read()
-                    if self.report_type == "pptx":
-                        if par:
-                            self._delete_paragraph(par)
-                        top = Inches(1.65)
-                        left = Inches(8)
-                        width = Inches(4.5)
-                        height = Inches(3)
-                        # Create new textbox, textframe, paragraph, and run
-                        textbox = self.finding_slide.shapes.add_textbox(left, top, width, height)
-                        text_frame = textbox.text_frame
-                        p = text_frame.paragraphs[0]
-                        run = p.add_run()
-                        # Insert evidence and apply formatting
-                        run.text = evidence_text
-                        font = run.font
-                        font.size = Pt(11)
-                        font.name = "Courier New"
-                    else:
-                        # Drop in text evidence using the ``CodeBlock`` style
-                        par.text = evidence_text
-                        par.style = "CodeBlock"
-                        par.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                        # Add a caption paragraph below the evidence
-                        p = self.sacrificial_doc.add_paragraph(style="Caption")
-                        ref_name = re.sub(
-                            "[^A-Za-z0-9]+",
-                            "",
-                            evidence["friendly_name"],
-                        )
-                        self._make_figure(p, ref_name)
-                        run = p.add_run(self.prefix_figure + evidence["caption"])
-            elif extension in self.image_extensions:
-                # Drop in the image at the full 6.5" width and add the caption
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(file_path)
+        # Next, check if the file is approved and handle as either text or image
+        if extension in self.text_extensions:
+            with open(file_path, "r") as evidence_contents:
+                # Read in evidence text
+                evidence_text = evidence_contents.read()
                 if self.report_type == "pptx":
                     if par:
                         self._delete_paragraph(par)
-                    # Place new textbox to the mid-right
                     top = Inches(1.65)
                     left = Inches(8)
                     width = Inches(4.5)
-                    self.finding_slide.shapes.add_picture(file_path, left, top, width=width)
+                    height = Inches(3)
+                    # Create new textbox, textframe, paragraph, and run
+                    textbox = self.finding_slide.shapes.add_textbox(left, top, width, height)
+                    text_frame = textbox.text_frame
+                    p = text_frame.paragraphs[0]
+                    run = p.add_run()
+                    # Insert evidence and apply formatting
+                    run.text = evidence_text
+                    font = run.font
+                    font.size = Pt(11)
+                    font.name = "Courier New"
                 else:
-                    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    run = par.add_run()
-                    try:
-                        # Add the picture to the document and then add a border
-                        run.add_picture(file_path, width=Inches(6.5))
-                    except docx.image.exceptions.UnrecognizedImageError:
-                        logger.exception(
-                            "Evidence file known as %s (%s) was not recognized as a %s file.",
-                            evidence["friendly_name"],
-                            file_path,
-                            extension,
-                        )
-                        error_msg = (
-                            f'The evidence file, `{evidence["friendly_name"]},` was not recognized as a {extension} file. '
-                            "Try opening it, exporting as desired type, and re-uploading it."
-                        )
-                        raise UnrecognizedImageError(error_msg) from docx.image.exceptions.UnrecognizedImageError
-
-                    if self.enable_borders:
-                        # Add the border – see Ghostwriter Wiki for documentation
-                        inline_class = run._r.xpath("//wp:inline")[-1]
-                        inline_class.attrib["distT"] = "0"
-                        inline_class.attrib["distB"] = "0"
-                        inline_class.attrib["distL"] = "0"
-                        inline_class.attrib["distR"] = "0"
-
-                        # Set the shape's "effect extent" attributes to the border weight
-                        effect_extent = OxmlElement("wp:effectExtent")
-                        effect_extent.set("l", str(self.border_weight))
-                        effect_extent.set("t", str(self.border_weight))
-                        effect_extent.set("r", str(self.border_weight))
-                        effect_extent.set("b", str(self.border_weight))
-                        # Insert just below ``<wp:extent>`` or it will not work
-                        inline_class.insert(1, effect_extent)
-
-                        # Find inline shape properties – ``pic:spPr``
-                        pic_data = run._r.xpath("//pic:spPr")[-1]
-                        # Assemble OXML for a solid border
-                        ln_xml = OxmlElement("a:ln")
-                        ln_xml.set("w", str(self.border_weight))
-                        solidfill_xml = OxmlElement("a:solidFill")
-                        color_xml = OxmlElement("a:srgbClr")
-                        color_xml.set("val", self.border_color)
-                        solidfill_xml.append(color_xml)
-                        ln_xml.append(solidfill_xml)
-                        pic_data.append(ln_xml)
-
-                    # Create the caption for the image
+                    # Drop in text evidence using the ``CodeBlock`` style
+                    par.text = evidence_text
+                    par.style = "CodeBlock"
+                    par.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    # Add a caption paragraph below the evidence
                     p = self.sacrificial_doc.add_paragraph(style="Caption")
-                    ref_name = re.sub("[^A-Za-z0-9]+", "", evidence["friendly_name"])
+                    ref_name = re.sub(
+                        "[^A-Za-z0-9]+",
+                        "",
+                        evidence["friendly_name"],
+                    )
                     self._make_figure(p, ref_name)
                     run = p.add_run(self.prefix_figure + evidence["caption"])
-            # Skip unapproved files
+        elif extension in self.image_extensions:
+            # Drop in the image at the full 6.5" width and add the caption
+            if self.report_type == "pptx":
+                if par:
+                    self._delete_paragraph(par)
+                # Place new textbox to the mid-right
+                top = Inches(1.65)
+                left = Inches(8)
+                width = Inches(4.5)
+                self.finding_slide.shapes.add_picture(file_path, left, top, width=width)
             else:
-                par = None
+                par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = par.add_run()
+                try:
+                    # Add the picture to the document and then add a border
+                    run.add_picture(file_path, width=Inches(6.5))
+                except docx.image.exceptions.UnrecognizedImageError:
+                    logger.exception(
+                        "Evidence file known as %s (%s) was not recognized as a %s file.",
+                        evidence["friendly_name"],
+                        file_path,
+                        extension,
+                    )
+                    error_msg = (
+                        f'The evidence file, `{evidence["friendly_name"]},` was not recognized as a {extension} file. '
+                        "Try opening it, exporting as desired type, and re-uploading it."
+                    )
+                    raise UnrecognizedImageError(error_msg) from docx.image.exceptions.UnrecognizedImageError
+
+                if self.enable_borders:
+                    # Add the border – see Ghostwriter Wiki for documentation
+                    inline_class = run._r.xpath("//wp:inline")[-1]
+                    inline_class.attrib["distT"] = "0"
+                    inline_class.attrib["distB"] = "0"
+                    inline_class.attrib["distL"] = "0"
+                    inline_class.attrib["distR"] = "0"
+
+                    # Set the shape's "effect extent" attributes to the border weight
+                    effect_extent = OxmlElement("wp:effectExtent")
+                    effect_extent.set("l", str(self.border_weight))
+                    effect_extent.set("t", str(self.border_weight))
+                    effect_extent.set("r", str(self.border_weight))
+                    effect_extent.set("b", str(self.border_weight))
+                    # Insert just below ``<wp:extent>`` or it will not work
+                    inline_class.insert(1, effect_extent)
+
+                    # Find inline shape properties – ``pic:spPr``
+                    pic_data = run._r.xpath("//pic:spPr")[-1]
+                    # Assemble OXML for a solid border
+                    ln_xml = OxmlElement("a:ln")
+                    ln_xml.set("w", str(self.border_weight))
+                    solidfill_xml = OxmlElement("a:solidFill")
+                    color_xml = OxmlElement("a:srgbClr")
+                    color_xml.set("val", self.border_color)
+                    solidfill_xml.append(color_xml)
+                    ln_xml.append(solidfill_xml)
+                    pic_data.append(ln_xml)
+
+                # Create the caption for the image
+                p = self.sacrificial_doc.add_paragraph(style="Caption")
+                ref_name = re.sub("[^A-Za-z0-9]+", "", evidence["friendly_name"])
+                self._make_figure(p, ref_name)
+                run = p.add_run(self.prefix_figure + evidence["caption"])
+        # Skip unapproved files
         else:
-            raise FileNotFoundError(file_path)
+            par = None
 
     def _delete_paragraph(self, par):
         """
@@ -1009,9 +1007,7 @@ class Reportwriter:
             """Merge the two style dictionaries, keeping the ``run_styles`` values."""
             for key in parent_styles:
                 # Same values in both dicts
-                if run_styles[key] == parent_styles[key]:
-                    pass
-                else:
+                if run_styles[key] != parent_styles[key]:
                     # Run has no value but parent has one
                     if not run_styles[key] and parent_styles[key]:
                         run_styles[key] = parent_styles[key]
@@ -1178,10 +1174,7 @@ class Reportwriter:
             make_list = True
             styles = self.sacrificial_doc.styles
             try:
-                if num:
-                    list_style = styles["Number List"]
-                else:
-                    list_style = styles["Bullet List"]
+                list_style = styles["Number List"] if num else styles["Bullet List"]
             except Exception:
                 if "List Paragraph" in styles:
                     list_style = styles["List Paragraph"]
@@ -1225,9 +1218,8 @@ class Reportwriter:
                 if part != "\n":
                     # If the tag name is ``ul`` or ``ol``, tack it as a nested list
                     if part.name in ("ol", "ul"):
-                        num = bool(part.name == "ol")
+                        num = part.name == "ol"
                         nested_list = part
-                    # Put everything else in a temporary list to be processed later
                     else:
                         temp.append(part)
 
@@ -1237,24 +1229,16 @@ class Reportwriter:
             # If ``temp`` isn't empty, process it like any other line
             if temp:
                 # A length of ``1`` means no nested tags
-                if len(temp) == 1:
-                    # If the first list item is a ``Tag`` process for styling
-                    if temp[0].name:
-                        self._process_nested_html_tags(temp, p, finding)
-                    # Otherwise, just write the XML
-                    else:
-                        self._replace_and_write(temp[0], p, finding)
-                else:
+                if len(temp) == 1 and temp[0].name or len(temp) != 1:
                     self._process_nested_html_tags(temp, p, finding)
-
+                else:
+                    self._replace_and_write(temp[0], p, finding)
             # If we have nested list(s), recursively process them by re-entering ``_parse_html_lists``
             if nested_list:
                 # Increment the indentation level
-                if not li_contents[0] == "\n":
+                if li_contents[0] != "\n":
                     level += 1
                 p = self._parse_html_lists(nested_list, p, num, finding, level)
-        # No nested list items, proceed as normal
-        # This is where we catch ``li`` tags with nested tags like hyperlinks
         else:
             p = self._create_list_paragraph(prev_p, level, num)
             self._process_nested_html_tags(tag.contents, p, finding)
@@ -1302,26 +1286,21 @@ class Reportwriter:
                     p = self._parse_nested_html_lists(part, prev_p, num, finding, level)
                 # Track the paragraph used for this list item to link subsequent list paragraphs
                 prev_p = p
-            # If ``ol`` tag encountered, increment ``level`` and switch to numbered list
             elif part.name == "ol":
                 level += 1
                 p = self._parse_html_lists(part, prev_p, True, finding, level)
-            # If ``ul`` tag encountered, increment ``level`` and switch to bulleted list
             elif part.name == "ul":
                 level += 1
                 p = self._parse_html_lists(part, prev_p, False, finding, level)
-            # No change in list type, so proceed with writing the line
             elif part.name:
                 p = self._create_list_paragraph(prev_p, level, num)
                 self._process_nested_html_tags(part, p, finding)
-            # Handle tags that are not handled above
+            elif isinstance(part, NavigableString):
+                if part.strip() != "":
+                    p = self._create_list_paragraph(prev_p, level, num)
+                    self._replace_and_write(part.strip(), p, finding)
             else:
-                if not isinstance(part, NavigableString):
-                    logger.warning("Encountered an unknown tag for a list: %s", part.name)
-                else:
-                    if part.strip() != "":
-                        p = self._create_list_paragraph(prev_p, level, num)
-                        self._replace_and_write(part.strip(), p, finding)
+                logger.warning("Encountered an unknown tag for a list: %s", part.name)
         # Return last paragraph created
         return p
 
@@ -1337,138 +1316,126 @@ class Reportwriter:
         ``finding``
             Current report finding being processed
         """
-        if text:
-            # Clean text to make it XML compatible for Office XML
-            text = "".join(c for c in text if self._valid_xml_char_ordinal(c))
+        if not text:
+            return
+        # Clean text to make it XML compatible for Office XML
+        text = "".join(c for c in text if self._valid_xml_char_ordinal(c))
 
-            # Parse the HTML into a BS4 soup object
-            soup = BeautifulSoup(text, "lxml")
+        # Parse the HTML into a BS4 soup object
+        soup = BeautifulSoup(text, "lxml")
 
-            # Each WYSIWYG field begins with ``<html><body>`` so get the contents of ``body``
-            body = soup.find("body")
-            contents_list = body.contents
+        # Each WYSIWYG field begins with ``<html><body>`` so get the contents of ``body``
+        body = soup.find("body")
+        contents_list = body.contents
 
             # Loop over all strings and ``bs4.element.Tag`` objects
-            for tag in contents_list:
-                # Get the HTML tag's name to determine next steps
-                tag_name = tag.name
+        for tag in contents_list:
+            # Get the HTML tag's name to determine next steps
+            tag_name = tag.name
 
                 # Hn – Headings
-                if tag_name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
-                    if self.report_type == "pptx":
-                        # No headings in PPTX, so add a new line and bold it as a pseudo-heading
-                        p = self.finding_body_shape.text_frame.add_paragraph()
-                        run = p.add_run()
-                        run.text = tag.text
-                        font = run.font
-                        font.bold = True
-                    else:
-                        heading_num = int(tag_name[1])
+            if tag_name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+                if self.report_type == "pptx":
+                    # No headings in PPTX, so add a new line and bold it as a pseudo-heading
+                    p = self.finding_body_shape.text_frame.add_paragraph()
+                    run = p.add_run()
+                    run.text = tag.text
+                    font = run.font
+                    font.bold = True
+                else:
                         # Add the heading to the document
                         # This discards any inline formatting, but that should be managed
                         # by editing the style in the template
-                        p = self.sacrificial_doc.add_heading(tag.text, heading_num)
+                    p = self.sacrificial_doc.add_heading(tag.text, int(tag_name[1]))
 
-                # P – Paragraphs
-                elif tag_name == "p":
-                    # Get the tag's contents to check for additional formatting
-                    contents = tag.contents
+            elif tag_name == "p":
+                # Get the tag's contents to check for additional formatting
+                contents = tag.contents
 
-                    # Add a paragraph to the document based on doc type
-                    if self.report_type == "pptx":
-                        p = self.finding_body_shape.text_frame.add_paragraph()
-                        ALIGNMENT = PP_ALIGN
-                    else:
-                        p = self.sacrificial_doc.add_paragraph()
-                        ALIGNMENT = WD_ALIGN_PARAGRAPH
-
-                    # Check for alignment classes on the ``p`` tag
-                    if "class" in tag.attrs:
-                        tag_attrs = tag.attrs["class"]
-                        if "left" in tag_attrs:
-                            p.alignment = ALIGNMENT.LEFT
-                        if "center" in tag_attrs:
-                            p.alignment = ALIGNMENT.CENTER
-                        if "right" in tag_attrs:
-                            p.alignment = ALIGNMENT.RIGHT
-                        if "justify" in tag_attrs:
-                            p.alignment = ALIGNMENT.JUSTIFY
-
-                    # Pass the contents and new paragraph on to drill down into nested formatting
-                    self._process_nested_html_tags(contents, p, finding)
-
-                # PRE – Code Blocks
-                elif tag_name == "pre":
-                    # Get the list of pre-formatted strings
-                    contents = tag.contents
-
-                    # We do not style any text inside a code block, so we just write the XML
-                    # The only content should be one ``code`` block and a long line of text broken up by ``\r\n``
-                    if self.report_type == "pptx":
-                        # Place new textbox to the mid-right to keep it out of the way
-                        if contents:
-                            top = Inches(1.65)
-                            left = Inches(8)
-                            width = Inches(4.5)
-                            height = Inches(3)
-                            # Create new textbox, textframe, paragraph, and run
-                            textbox = self.finding_slide.shapes.add_textbox(left, top, width, height)
-                            text_frame = textbox.text_frame
-                            for content in contents:
-                                for code in content:
-                                    parts = code.split("\r\n")
-                                    for code_line in parts:
-                                        p = text_frame.add_paragraph()
-                                        # Align left to anticipate a monospaced font for code
-                                        p.alignment = PP_ALIGN.LEFT
-                                        run = p.add_run()
-                                        # Insert code block and apply formatting
-                                        run.text = code_line
-                                        font = run.font
-                                        font.size = Pt(11)
-                                        font.name = "Courier New"
-                    else:
-                        if contents:
-                            for content in contents:
-                                for code in content:
-                                    parts = code.split("\r\n")
-                                    for code_line in parts:
-                                        # Create paragraph and apply the ``CodeBlock`` style
-                                        p = self.sacrificial_doc.add_paragraph(code_line)
-                                        p.style = "CodeBlock"
-                                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-
-                # OL & UL – Ordered/Numbered & Unordered Lists
-                elif tag_name in ("ol", "ul"):
-                    # Ordered/numbered lists need numbers and linked paragraphs
-                    prev_p = None
-                    num = bool(tag_name == "ol")
-                    # In HTML, sub-items in a list are nested HTML lists
-                    # We need to check every list item for formatted and additional lists
-                    # While tracking which level of the list we are working with
-                    level = 0
-                    prev_p = self._parse_html_lists(tag, prev_p, num, finding, level)
-
-                # BLOCKQUOTE – Blockquote Sections
-                elif tag_name == "blockquote":
-                    # Get the tag's contents to check for additional formatting
-                    contents = tag.contents
-
-                    # PowerPoint lacks a blockquote style, so we just add a basic paragraph
-                    if self.report_type == "pptx":
-                        p = self.finding_body_shape.text_frame.add_paragraph()
-                    else:
-                        p = self.sacrificial_doc.add_paragraph()
-                        p.style = "Blockquote"
-
-                    # Pass the contents and new paragraph on to drill down into nested formatting
-                    self._process_nested_html_tags(contents, p, finding)
+                # Add a paragraph to the document based on doc type
+                if self.report_type == "pptx":
+                    p = self.finding_body_shape.text_frame.add_paragraph()
+                    ALIGNMENT = PP_ALIGN
                 else:
-                    if not isinstance(tag, NavigableString):
-                        logger.warning(
-                            "Encountered an unknown tag inside of the finding HTML: %s",
-                            tag_name,
-                        )
+                    p = self.sacrificial_doc.add_paragraph()
+                    ALIGNMENT = WD_ALIGN_PARAGRAPH
+
+                # Check for alignment classes on the ``p`` tag
+                if "class" in tag.attrs:
+                    tag_attrs = tag.attrs["class"]
+                    if "left" in tag_attrs:
+                        p.alignment = ALIGNMENT.LEFT
+                    if "center" in tag_attrs:
+                        p.alignment = ALIGNMENT.CENTER
+                    if "right" in tag_attrs:
+                        p.alignment = ALIGNMENT.RIGHT
+                    if "justify" in tag_attrs:
+                        p.alignment = ALIGNMENT.JUSTIFY
+
+                # Pass the contents and new paragraph on to drill down into nested formatting
+                self._process_nested_html_tags(contents, p, finding)
+
+            elif tag_name == "pre":
+                if contents := tag.contents:
+                    if self.report_type == "pptx":
+                        top = Inches(1.65)
+                        left = Inches(8)
+                        width = Inches(4.5)
+                        height = Inches(3)
+                        # Create new textbox, textframe, paragraph, and run
+                        textbox = self.finding_slide.shapes.add_textbox(left, top, width, height)
+                        text_frame = textbox.text_frame
+                        for content in contents:
+                            for code in content:
+                                parts = code.split("\r\n")
+                                for code_line in parts:
+                                    p = text_frame.add_paragraph()
+                                    # Align left to anticipate a monospaced font for code
+                                    p.alignment = PP_ALIGN.LEFT
+                                    run = p.add_run()
+                                    # Insert code block and apply formatting
+                                    run.text = code_line
+                                    font = run.font
+                                    font.size = Pt(11)
+                                    font.name = "Courier New"
+                    else:
+                        for content in contents:
+                            for code in content:
+                                parts = code.split("\r\n")
+                                for code_line in parts:
+                                    # Create paragraph and apply the ``CodeBlock`` style
+                                    p = self.sacrificial_doc.add_paragraph(code_line)
+                                    p.style = "CodeBlock"
+                                    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+            elif tag_name in ("ol", "ul"):
+                # Ordered/numbered lists need numbers and linked paragraphs
+                prev_p = None
+                num = tag_name == "ol"
+                # In HTML, sub-items in a list are nested HTML lists
+                # We need to check every list item for formatted and additional lists
+                # While tracking which level of the list we are working with
+                level = 0
+                prev_p = self._parse_html_lists(tag, prev_p, num, finding, level)
+
+            elif tag_name == "blockquote":
+                # Get the tag's contents to check for additional formatting
+                contents = tag.contents
+
+                # PowerPoint lacks a blockquote style, so we just add a basic paragraph
+                if self.report_type == "pptx":
+                    p = self.finding_body_shape.text_frame.add_paragraph()
+                else:
+                    p = self.sacrificial_doc.add_paragraph()
+                    p.style = "Blockquote"
+
+                # Pass the contents and new paragraph on to drill down into nested formatting
+                self._process_nested_html_tags(contents, p, finding)
+            elif not isinstance(tag, NavigableString):
+                logger.warning(
+                    "Encountered an unknown tag inside of the finding HTML: %s",
+                    tag_name,
+                )
 
     def generate_word_docx(self):
         """Generate a complete Word document for the current report."""
@@ -1670,11 +1637,7 @@ class Reportwriter:
         keyword_regex = r"\{\{\.(.*?)\}\}"
 
         # Strip out all HTML tags because we can't format text runs for XLSX
-        if html:
-            text = BeautifulSoup(html, "lxml").text
-        else:
-            text = ""
-
+        text = BeautifulSoup(html, "lxml").text if html else ""
         # Perform the necessary replacements
         if "{{.client}}" in text:
             if self.report_json["client"]["short_name"]:
@@ -1691,9 +1654,7 @@ class Reportwriter:
         # No evidence or captions in workbook cells
         text = text.replace("{{.caption}}", "Caption \u2013 ")
 
-        # Find/replace evidence keywords to make everything human-readable
-        match = re.findall(keyword_regex, text)
-        if match:
+        if match := re.findall(keyword_regex, text):
             for keyword in match:
                 if "evidence" in finding:
                     if (
@@ -1706,15 +1667,8 @@ class Reportwriter:
                             if ev["friendly_name"] == keyword:
                                 text = text.replace(
                                     "{{." + keyword + "}}",
-                                    "\n<See Report for Evidence File: {}>\nCaption \u2013 {}".format(
-                                        ev["friendly_name"],
-                                        ev["caption"],
-                                    ),
+                                    f'\n<See Report for Evidence File: {ev["friendly_name"]}>\nCaption \u2013 {ev["caption"]}',
                                 )
-                # Ignore any other non-keyword string that happens to be inside braces
-                else:
-                    pass
-
         # Sanitize text to prevent command injection
         bad_chars = ["=", "+", "-", "@", "\t", "\r", "{"]
         for char in bad_chars:
@@ -1874,7 +1828,7 @@ class Reportwriter:
             col = 0
 
         # Add a filter to the worksheet
-        worksheet.autofilter("A1:M{}".format(len(self.report_json["findings"]) + 1))
+        worksheet.autofilter(f'A1:M{len(self.report_json["findings"]) + 1}')
 
         # Finalize document
         xlsx_doc.close()
@@ -2242,8 +2196,9 @@ class TemplateLinter:
                     # Step 3: Test rendering the document
                     try:
                         template_document.render(LINTER_CONTEXT, self.jinja_template_env, autoescape=True)
-                        undefined_vars = template_document.undeclared_template_variables
-                        if undefined_vars:
+                        if (
+                            undefined_vars := template_document.undeclared_template_variables
+                        ):
                             for variable in undefined_vars:
                                 results["warnings"].append(f"Undefined variable: {variable}")
                         if results["warnings"]:
